@@ -1,0 +1,18 @@
+  ボタンとカメラ仕様（最新版）
+
+  - 2行構成。上段 Outside 行・下段 Inside 行。各行の最左列はラベル表示のみで Outside / Inside。
+  - ラベル右に [Home][User][Front][Back][Left][Right][Top] を水平に配置。Bottom は廃止。
+  - Outside/Inside の User はそれぞれ独立したカスタム視点を保持し、初期値はいずれもフロントを含む斜めビュー。
+  - Outside プリセット
+      - Home: 室外俯瞰で部屋全体が必ず収まる距離に固定。
+      - Front/Back/Left/Right: 対応する外側位置から各面の法線方向を向く。部屋は箱状に見える。
+      - Top: 天井上方から真下を向き、天井面とトップスピーカーを俯瞰。
+  - Inside プリセット
+      - Home: 室内ホームビュー。カメラ位置は常に原点（リスニング位置）に固定。
+      - User: 原点固定のままユーザー調整を保持。
+      - Front/Back/Left/Right: すべて原点固定で向きのみ +X/-X/-Z/+Z に切り替え。
+      - Top: 原点位置で真上（+Y）を向く室内視点。
+  - Outside は常に cameraInside = false で遠距離から、Inside は cameraInside = true で原点固定。
+  - Zoom 操作は、Home 視点を 100% とした倍率で扱い、10%～200% の範囲で調整。Outside Home/Inside Home それぞれの距離を基
+  準に、倍率で距離（または FOV 相当）を算出。
+

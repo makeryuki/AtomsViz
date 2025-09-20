@@ -1,0 +1,35 @@
+# JUCE / Visual Studio build artifacts
+Builds/**/x64/
+Builds/**/Win32/
+Builds/**/x86/
+Builds/**/Debug/
+Builds/**/Release/
+Builds/**/*.obj
+Builds/**/*.pdb
+Builds/**/*.dll
+Builds/**/*.exe
+Builds/**/*.lib
+Builds/**/*.idb
+Builds/**/*.ipdb
+Builds/**/*.iobj
+Builds/**/*.pch
+
+# Visual Studio user files
+*.suo
+*.user
+*.userprefs
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+
+# Generated JUCE cache
+JuceLibraryCode/juce_audio_plugin_client_AAX_pch.h
+JuceLibraryCode/juce_audio_plugin_client_Unity_pch.h
+JuceLibraryCode/juce_audio_plugin_client_VST3_pch.h
+JuceLibraryCode/juce_audio_plugin_client_VST_pch.h
+
+# Misc
+.DS_Store
+Thumbs.db
+.vs/
+

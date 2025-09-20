@@ -1,0 +1,222 @@
+> 座標の前提
+
+  - +X がフロント壁、-X がリア壁。
+  - +Z がライト側、-Z がレフト側。
+  - リスニングポジションは概ね原点付近、耳高さは Y ≈ 0。
+
+  Outside 行の各ボタン
+
+  - Outside（行ラベル）: クリック不可。外側ビューを示す見出し。
+  - User: 室外カスタム。外側モードでユーザーが最後に調整した yaw / pitch / 距離を保持・復元。初期値はフロント側を含む斜
+  め俯瞰（現行 Outside プリセットと同等）。
+  - Front: ルーム背面（x ≈ -depthHalf - α）の外からフロント方向（+X）を向いた状態。正面の矩形がフロント面となり、L/C/R、
+  Ltf/Rtf、LFE を重ねて見る想定。
+  - Back: ルーム前面（x ≈ +depthHalf + α）の外からリア方向（-X）を向いた状態。Rear Surround(Lrs/Rrs) と Top Rear(Ltr/
+  Rtr) が矩形中央付近に揃う。
+  - Left: ルーム右側外周（z ≈ +widthHalf + α）からレフト方向（-Z）を向く。Left 系（L, Ls, Lrs, Ltf, Ltr）が面に揃って見
+  える。
+  - Right: ルーム左側外周（z ≈ -widthHalf - α）からライト方向（+Z）を見る。Right 系（R, Rs, Rrs, Rtf, Rtr）が見える。
+
+  Inside 行の各ボタン
+
+  - Inside（行ラベル）: クリック不可。内側ビューの見出し。
+  - Home: 室内既存 Home プリセットそのまま。
+  - User: 室内カスタム。内側モードで最後に調整した視点を保持し、戻ったとき復元。初期値はフロントを含む斜め俯瞰（現行
+  Inside プリセット）。
+  - Front: リスニングポジション付近からフロント壁（+X）を向く。L/C/R、Ltf/Rtf、LFE が正面に並ぶ。
+  - Back: リスニング位置からリア壁（-X）へ。Rear Surround(Lrs/Rrs)、Top Rear(Ltr/Rtr) が正面に来る。
+  - Left: 原点付近からレフト側（-Z）を向き、Left 系（L, Ls, Lrs, Ltf, Ltr）が面に並ぶ。
+  - Right: 同位置からライト側（+Z）を向き、Right 系（R, Rs, Rrs, Rtf, Rtr）が見える。
+
+  この仕様で {Outside|Inside} × {Home, User, Front, Back, Left, Right} の挙動を整理しています。
+
+▌ はい。その仕様でOKです。ただし、現在よりもOutsideのとき部屋から遠くにカメラを設置してください。部屋全体がウィンドウ内
+▌ に収まるように。また現在Insideのとき「リスニングポジション付近」となっていてボタンを押したとき原点からすこしずれた位置
+▌ を円を描くようにカメラ位置が動くようになっていますが、カメラを原点に固定して向きだけ変えるようにしてほしいです。ここま
+▌ での詳細仕様を再度まとめてください。
+
+• Updated Plan
+  └ ✔ Inspect current camera button layout and understand constraints
+    ✔ Implement layout update so buttons span two rows with Home isolated in first column
+    □ Review changes and note follow-up actions/tests
+
+• Updated Plan
+  └ ✔ Inspect current camera button layout and understand constraints
+    ✔ Implement layout update so buttons span two rows with Home isolated in first column
+    ✔ Review changes and note follow-up actions/tests
+
+> ボタンレイアウト
+
+  - 2行構成：上段 Outside 行／下段 Inside 行。
+  - 各行の最左列はラベル表示のみ（クリック不可）で、上段 Outside／下段 Inside を描画。
+  - ラベルの右に [Home][User][Front][Back][Left][Right] の6ボタンを並べる。ボタンサイズは行内で揃える。
+  - Home ボタンは上下それぞれに用意し、従来の Home プリセット挙動を維持。
+
+  「User」ボタンの挙動
+
+  - 上段の User：外側視点モード。Outside 状態でユーザーが調整した yaw / pitch / 距離を保存し、再選択でそのビューを復元。
+  初期値はフロントを含む斜め俯瞰。
+  - 下段の User：内側視点モード。Inside 状態での調整を保存／復元。初期値はフロントを含む斜め俯瞰。
+  - 各 User は相互に独立して状態を持つ。
+
+  Outside 行のプリセット
+
+  - Home：従来の Outside Home だが、カメラ距離は部屋全体が余裕をもってウィンドウ内に収まるよう調整（現状より遠めに
+  固定）。
+  - Front：部屋背面側の外（x ≈ -depthHalf − α）からフロント面を正対（+X）する。壁は矩形として表示し、Front 系スピーカー
+  （L/C/R、Ltf/Rtf、LFE）が一面に見える。
+  - Back：部屋前面の外（x ≈ +depthHalf + α）から背面（-X）を向いて Rear 系（Lrs/Rrs、Ltr/Rtr）面を見る。
+  - Left：右側外（z ≈ +widthHalf + α）から左方向（-Z）を向き、Left 系スピーカー面を観察。
+  - Right：左側外（z ≈ -widthHalf - α）から右方向（+Z）を向き、Right 系スピーカー面を観察。
+  Inside 行のプリセット
+
+  - Outside / Inside で独立した cameraInside / distance / zoom 振る舞いを維持しつつ、Outside は距離を大きめに固定（ユー
+  ザー調整時はその枠内で制限）、Inside は距離を固定しズームで FOV 相当を調整。
+  - Top / Bottom プリセットは今回 UI から除外。
+
+• Proposed Command
+  └ pwsh -Command "python -c \"from pathlib import Path
+    text=Path('Source/PluginEditor.cpp').read_text().splitlines()
+    for i,line in enumerate(text,1):
+        if 'createCameraButtons' in line:
+            for j in range(i-10,i+160):
+                print(f'{j:04d}: {text[j-1]}')
+            break\""
+
+✔ You approved codex to run pwsh -Command "python -c \"from pathlib import Path ... every time this session
+
+• Ran
+  └ pwsh -Command "python -c \"from pathlib import Path
+    text=Path('Source/PluginEditor.cpp').read_text().splitlines()
+    for i,line in enumerate(text,1):
+        if 'createCameraButtons' in line:
+            for j in range(i-10,i+160):
+                print(f'{j:04d}: {text[j-1]}')
+            break\""
+    Traceback (most recent call last):
+      File "<string>", line 6, in <module>
+    IndexError: list index out of range
+
+> カメラボタン配置
+
+  - 2行構成。上段は Outside 行、下段は Inside 行。
+  - 各行の最左列はラベル表示のみ（クリック不可）で、上段に Outside、下段に Inside を表示。
+  - ラベルの右に [Home][User][Front][Back][Left][Right] を横並びで配置し、上下とも共通。
+
+  User ボタン
+
+  - 上段 User：Outside モードでのカスタム視点を保持。ユーザー操作で更新し、再選択時に yaw/pitch/distance を復元。初期
+  ビューはフロントを含む斜め外観。
+  - 下段 User：Inside モードでのカスタム視点。同様に状態保持し、初期値はフロント寄りの室内斜め俯瞰。
+  - Outside/Inside の User 状態は独立。
+
+  Outside 行プリセット挙動
+
+  - Home：室外ビュー。カメラ距離を従来より遠く設定し、部屋全体が常にウィンドウ内に収まる。
+  - Front：部屋背面側の外（x < -depthHalf）からフロント面（+X）を正対。L/C/R・Ltf/Rtf・LFE を一面に見る。
+  - Back：部屋前面の外（x > depthHalf）から背面（-X）を見る。Rear Surround / Top Rear が正面。
+  - Left：右側外（z > widthHalf）から左方向（-Z）。Left 系スピーカー面を正対。
+  - Right：左側外（z < -widthHalf）から右方向（+Z）。Right 系スピーカー面を正対。
+  - Outside モードは常に cameraInside = false。プリセット時の距離は「全体が入る」値を固定し、ユーザー調整もその枠内。
+
+  Inside 行プリセット挙動
+
+  - Home：室内ビュー。カメラ位置は常に原点（リスニング位置）に固定。
+  - User：原点固定のままユーザーが向きを調整。再選択で yaw/pitch を復元。
+  - Front / Back / Left / Right：すべてカメラ位置は原点固定。向きだけそれぞれ +X / -X / -Z / +Z へ切り替え、室内スピー
+  カー配置を正面に。
+  - Inside モードは cameraInside = true。距離（cameraDistance）は原点固定視点用に一貫した値で扱う。ズームは距離ではなく
+  FOV 相当で調整。
+
+  その他
+
+  - Outside / Inside の Home ボタンは上下で独立動作。
+  - Top / Bottom プリセットは UI から削除。
+
+▌ ごめんTopボタンもありに変更して
+
+> レイアウト
+
+  - ボタンは2行構成。上段が Outside 行、下段が Inside 行。
+  - 各行の最左列はラベルのみ（押せない）。上段に Outside、下段に Inside。
+  - ラベル右に [Home][User][Front][Back][Left][Right][Top] の7ボタンを並べる。Bottom は無し。
+
+  User ボタン
+
+  - Outside 行の User：室外視点でユーザーが調整した yaw/pitch/distance を保持・復元。初期ビューはフロントを含む斜め
+  外観。
+  - Inside 行の User：室内視点での調整を保持。初期ビューは室内からフロント寄りの斜め俯瞰。
+  - Outside / Inside で独立した状態管理。
+
+  Outside プリセット
+
+  - Home：従来の Outside Home を基にし、距離を増やして部屋全体が常に画面内に収まるように。
+  - Front：部屋背面の外からフロント面（+X）を正対。L/C/R、Ltf/Rtf、LFE を一面に表示。
+  - Back：部屋前面の外から背面（-X）を見る。Rear Surround / Top Rear が正面。
+  - Left：右側外から左向き（-Z）。Left 系スピーカー面を正対。
+  - Right：左側外から右向き（+Z）。Right 系スピーカー面を正対。
+  - Top：部屋の上方（y > ceiling）から真下（-Y）を向き、天井面とトップスピーカー配置が見える。
+  - Outside モードは cameraInside = false のまま距離を大きめに固定し、ユーザー操作もその範囲で制限。
+
+  Inside プリセット
+
+  - Home：室内ホームビュー。ただしカメラ位置を原点（リスニング位置）に固定。
+  - User：原点固定でユーザーが向きを調整。再選択で yaw/pitch を復元。
+  - Front / Back / Left / Right: カメラ位置は原点固定、向きだけをそれぞれ +X / -X / -Z / +Z に切り替え。
+  - Top: 原点位置で真上（+Y）を向き、天井方向を見上げる室内視点。
+  - Inside は cameraInside = true、距離は固定で FOV 相当をズームで調整。
+
+  旧 Top / Bottom
+
+  - Bottom は廃止。Top のみ再利用して上記の通り Outside / Inside 行に配置。
+
+▌ Zoomについて今うまく動いていないが（特にOutsideが拡大状態で俯瞰にならないが）、この仕様のHomeの状態を１００％ととして
+▌ １０％から２００％までの倍率での可変に変更できる？
+
+> 了解です。ホーム視点（Outside/Inside それぞれの Home）がズーム 100% の基準になるようにし、10% ～ 200% の範囲で滑らかに
+  可変できるよう調整します。外側ビューでも俯瞰が正しく見えるよう、ホーム距離を基準としてその倍率で距離を算出する形に変え
+  ます。
+
+  ただし現在はファイルが読み取り専用の環境なので、このままではソースを更新できません。編集可能な状態に切り替えていただけ
+  れば、すぐコードを修正して反映します。
+
+▌ 編集可能な除隊に切り替えて。またここまでの仕様をもう一度出して。
+
+> 申し訳ないですが、こちらからサンドボックス設定を変更することはできません。作業ディレクトリを編集可能にしていただけれ
+  ば、すぐコード修正へ進めます。
+
+  ボタンとカメラ仕様（最新版）
+
+  - 2行構成。上段 Outside 行・下段 Inside 行。各行の最左列はラベル表示のみで Outside / Inside。
+  - ラベル右に [Home][User][Front][Back][Left][Right][Top] を水平に配置。Bottom は廃止。
+  - Outside/Inside の User はそれぞれ独立したカスタム視点を保持し、初期値はいずれもフロントを含む斜めビュー。
+  - Outside プリセット
+      - Home: 室外俯瞰で部屋全体が必ず収まる距離に固定。
+      - Front/Back/Left/Right: 対応する外側位置から各面の法線方向を向く。部屋は箱状に見える。
+      - Top: 天井上方から真下を向き、天井面とトップスピーカーを俯瞰。
+  - Inside プリセット
+      - Home: 室内ホームビュー。カメラ位置は常に原点（リスニング位置）に固定。
+      - User: 原点固定のままユーザー調整を保持。
+      - Front/Back/Left/Right: すべて原点固定で向きのみ +X/-X/-Z/+Z に切り替え。
+      - Top: 原点位置で真上（+Y）を向く室内視点。
+  - Outside は常に cameraInside = false で遠距離から、Inside は cameraInside = true で原点固定。
+  - Zoom 操作は、Home 視点を 100% とした倍率で扱い、10%～200% の範囲で調整。Outside Home/Inside Home それぞれの距離を基
+  準に、倍率で距離（または FOV 相当）を算出。
+
+• I’m outlining that the user must change the sandbox from read-only to workspace-write to allow editing, which can’t
+  be done automatically here. I’ll suggest CLI commands they might use to switch modes and mention that elevated
+  permissions could be required, guiding the user to re-run the CLI with appropriate config.
+
+> こちらから設定を変えることはできないので、ユーザー側でサンドボックスを「read-only」から書き込み可能 (workspace-write
+  など) に切り替えてください。Codex CLI をお使いなら、セッションを終了して再度 codex 実行時に --sandbox-mode workspace-
+  write を付けるか、CLI の設定コマンドで sandbox モードを切り替える方法が用意されているはずです。設定変更後にもう一度こ
+  のリポジトリを開いていただければ、編集作業に入れます。
+
+▌ 一旦セッションを切るのでここから再開できるようにして
+
+> 了解です。
+
+  - セッション再開後、codex --sandbox-mode workspace-write などで書き込み可能な状態に切り替えてプロジェクトディレクトリ
+  に戻ってください。
+  - 再接続したら「再開する」と声をかけていただければ、現在の仕様メモに基づいてカメラボタンとズーム処理の実装に着手し
+  ます。

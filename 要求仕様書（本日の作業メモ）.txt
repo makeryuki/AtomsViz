@@ -1,0 +1,41 @@
+> 要求仕様書（本日の作業メモ）
+
+  1. 概要
+     AtmosViz VST3 プラグインに 7.1.4 入力を視覚化する 3D ビューを実装。室内外カメラプリセット、指向性ローブ、ルームワイ
+  ヤーフレーム、ズーム操作などを追加した。
+  2. カメラ・視点仕様
+      - ボタンパネルは 2 行構成。最左列ラベル `Outside` / `Inside` の右に `[Home][User][Front][Back][Left][Right][Top]` を水平配置し、`Bottom` は廃止。
+      - 起動時は Inside 行の Home を適用し、Dolby 規定リスニングポジションを正面に表示。
+      - Outside 行: 遠距離俯瞰用。Home は部屋全体が必ず収まる固定距離（目安 40 m）からの基準視点、User は室外用カスタム視点（初期値: フロントを含む斜め俯瞰ビュー）を保持し、Front/Back/Left/Right は各面の外側から法線方向を向いて箱状のビューを作り、Top は天井上方から真下を向いて天井面とトップスピーカーを俯瞰する。
+      - Inside 行: 原点固定オービット。Home は室内ホームビューで原点（リスニング位置）から正面を向く。User は原点固定のまま調整した yaw/pitch/ズームを保持する室内容カスタム視点（初期値: フロントを含む斜め俯瞰ビュー）を保存し、Front/Back/Left/Right は向きを +Z/-Z/-X/+X に切り替え、Top は原点で真上（+Y）を向いて天井面とトップスピーカーを俯瞰する。
+      - Outside は常に `cameraInside = false` で遠距離俯瞰、Inside は常に `cameraInside = true` で原点固定。
+      - Outside の距離は Home 基準 40 m を 100% とし、倍率で算出（例: 200% ≒ 20 m、10% ≒ 400 m）。
+      - User スロットは Outside / Inside で独立。
+      - ズームスライダーは「Zoom (10%–200%)」。Home を 100% とし、Outside は距離、Inside は FOV 相当を倍率で調整。
+      - XYZ ギズモで空間の向きを確認可能。  3. 可視化モード
+      - Zoom スライダー直下に `View Mode` プルダウンを設置し、可視化方式を選択できるようにする。初期値は Directional Lobes。
+      - Slider Mode (Zoom / Draw Scale) で共通スライダーの機能を切替え。Draw Scale は ±100→約0.5×〜2.0×、初期値 0 で入力ピーク=1.0 時に部屋の反対側へ届く。
+      - `Directional Lobes`: 既存の鋭いローブ描画を維持し、指向性を矢状で表示。
+      - `Layered Lobes`: 低・中・高域を想定した 3 層の扇形でローブの広がりを重ね塗り表示。
+      - `Directivity Balloon`: 指向性バルーンとして半透明の楕円シェルを前方へオフセットして描画。LFE は球状。
+      - `Radiation Heatmap`: ルーム内グリッドに対して逆二乗減衰+指向性で推定した音圧を半透明ヒートマップ粒子として重畳。
+      - `Temporal Trails`: 各スピーカの移動経路をトレイル化し、直近方向を細いラインで表示。
+      - どのモードでもスピーカ基底の円・ラベル表示は共通で残す。
+
+
+  5. 実装ファイル
+      - Source/PluginProcessor.cpp
+      - Source/PluginEditor.h
+      - Source/PluginEditor.cpp
+  6. ビルド手順
+      1. Visual Studio で Build > Clean Solution → Build > Build Solution。
+      2. 出力: C:\Users\capi_\codex\AtmosViz\Builds\VisualStudio2022\x64\Debug\VST3\AtmosViz.vst3\Contents\x86_64-
+  win\AtmosViz.vst3
+      3. %COMMONPROGRAMFILES%\VST3 へコピーし、DAW で再スキャン。
+
+  セッション再開時は上記ドキュメントを参照して続きの作業を行ってください。
+  7. 次回セッションで必ず守ること
+      - Outside 系プリセットの投影は常に平行投影として扱い、ズーム変更時にもルーム直方体が相似形を保つ既存ロジック（updateProjectionScale / projectPoint の outside 分岐）を変更しない。
+      - 隠線処理は背面側エッジのみ破線、線幅は前背面とも 3.0f で統一する現在の描画仕様を維持する。
+      - Outside Home/Front/Back/Left/Right/Top の yaw/pitch/距離は各面法線に正対する現行値から動かさない。
+
