@@ -30,6 +30,9 @@ namespace
 
     constexpr float insideProjectionScale  = 0.35f;
     constexpr float outsideProjectionScale = 0.45f;
+    constexpr float insideNearPlane        = 0.05f;
+    constexpr float insideDefaultZoom      = 0.25f;
+    constexpr float outsideDefaultZoom     = 1.0f;
 
     constexpr std::array<PresetDefinition, 12> presetDefinitions = { {
         { CameraPreset::OutsideHome,  { -110.0f, -18.0f, outsideHomeBaseDistance,  false } },
@@ -43,7 +46,7 @@ namespace
         { CameraPreset::InsideBack,   {   90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideLeft,   {    0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideRight,  {  180.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideTop,    {  -90.0f, -90.0f, insideTopBaseDistance,    true  } }
+        { CameraPreset::InsideTop,    {    0.0f,  -90.0f, insideTopBaseDistance,    true  } }
     } };
 }
 
@@ -75,7 +78,7 @@ SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& 
         outsideUserState.yaw          = juce::degreesToRadians (outsideHome->yawDegrees);
         outsideUserState.pitch        = juce::degreesToRadians (outsideHome->pitchDegrees);
         outsideUserState.baseDistance = outsideHome->baseDistance;
-        outsideUserState.zoom         = 1.0f;
+        outsideUserState.zoom         = outsideDefaultZoom;
     }
 
     if (const auto* insideHome = findPresetDefinition (CameraPreset::InsideHome))
@@ -83,7 +86,7 @@ SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& 
         insideUserState.yaw          = juce::degreesToRadians (insideHome->yawDegrees);
         insideUserState.pitch        = juce::degreesToRadians (insideHome->pitchDegrees);
         insideUserState.baseDistance = insideHome->baseDistance;
-        insideUserState.zoom         = 1.0f;
+        insideUserState.zoom         = insideDefaultZoom;
     }
 
     setCameraPreset (CameraPreset::OutsideHome);
@@ -113,28 +116,29 @@ void SpeakerVisualizerComponent::updateProjectionScale()
     const auto bounds = getLocalBounds().toFloat();
     const auto minDimension = std::max (1.0f, std::min (bounds.getWidth(), bounds.getHeight()));
 
-    const auto fill = cameraInside ? insideProjectionScale : outsideProjectionScale;
+    if (cameraInside)
+    {
+        baseProjectionScale = minDimension * insideProjectionScale;
+        projectionScale = baseProjectionScale * zoomFactor;
+        return;
+    }
+
+    const auto fill = outsideProjectionScale;
     const auto cosYaw   = std::cos (yaw);
     const auto sinYaw   = std::sin (yaw);
     const auto cosPitch = std::cos (pitch);
     const auto sinPitch = std::sin (pitch);
 
     float maxExtent = 0.0f;
-    const auto referenceDistance = cameraInside ? cameraDistance : cameraBaseDistance;
 
     for (const auto& vertex : roomVerticesModel)
     {
         const auto x1 = vertex.x * cosYaw - vertex.z * sinYaw;
         const auto z1 = vertex.x * sinYaw + vertex.z * cosYaw;
         const auto y2 = vertex.y * cosPitch - z1 * sinPitch;
-        const auto z2 = vertex.y * sinPitch + z1 * cosPitch;
 
-        const auto depth = referenceDistance - z2;
-        const auto clampedDepth = std::max (0.2f, std::abs (depth));
-        const auto perspectiveScale = cameraInside ? (referenceDistance / clampedDepth) : 1.0f;
-
-        maxExtent = std::max (maxExtent, std::abs (x1) * perspectiveScale);
-        maxExtent = std::max (maxExtent, std::abs (y2) * perspectiveScale);
+        maxExtent = std::max (maxExtent, std::abs (x1));
+        maxExtent = std::max (maxExtent, std::abs (y2));
     }
 
     if (maxExtent < 1.0e-4f)
@@ -161,8 +165,16 @@ SpeakerVisualizerComponent::ProjectedPoint SpeakerVisualizerComponent::projectPo
     const auto y2 = point.y * cosPitch - z1 * sinPitch;
     const auto z2 = point.y * sinPitch + z1 * cosPitch;
 
-    const auto depth  = cameraDistance - z2;
-    const auto perspectiveFactor = cameraInside ? (cameraDistance / std::max (0.2f, depth)) : 1.0f;
+    const auto depth  = cameraInside ? -z2 : cameraDistance - z2;
+
+    float perspectiveFactor = 1.0f;
+
+    if (cameraInside)
+    {
+        const auto referenceDistance = juce::jmax (insideNearPlane * 4.0f, cameraBaseDistance);
+        const auto clampedDepth = juce::jmax (insideNearPlane, depth);
+        perspectiveFactor = referenceDistance / clampedDepth;
+    }
 
     return {
         { centre.x + x1 * scale * perspectiveFactor,
@@ -221,11 +233,34 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
     if (cameraInside)
     {
         g.setColour (juce::Colours::whitesmoke.withAlpha (0.9f));
+
+        auto clipToNearPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
+        {
+            const float denom = other.depth - point.depth;
+            if (std::abs (denom) < 1.0e-6f)
+                return point;
+
+            const float t = (insideNearPlane - point.depth) / denom;
+            point.screen = point.screen + (other.screen - point.screen) * t;
+            point.depth = insideNearPlane;
+            return point;
+        };
+
         for (const auto& edge : roomEdges)
         {
-            const auto& a = roomVerticesProjected[(size_t) edge.first];
-            const auto& b = roomVerticesProjected[(size_t) edge.second];
-            g.drawLine (juce::Line<float> (a.screen, b.screen), 3.0f);
+            auto start = roomVerticesProjected[(size_t) edge.first];
+            auto end   = roomVerticesProjected[(size_t) edge.second];
+
+            if (start.depth <= insideNearPlane && end.depth <= insideNearPlane)
+                continue;
+
+            if (start.depth <= insideNearPlane)
+                start = clipToNearPlane (start, end);
+
+            if (end.depth <= insideNearPlane)
+                end = clipToNearPlane (end, start);
+
+            g.drawLine (juce::Line<float> (start.screen, end.screen), 3.0f);
         }
         return;
     }
@@ -439,9 +474,16 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
         pitch        = juce::degreesToRadians (params->pitchDegrees);
         cameraBaseDistance = params->baseDistance;
 
-        if (isHomePreset (preset))
+        const float targetZoom = cameraInside ? insideDefaultZoom : outsideDefaultZoom;
+
+        if (cameraInside)
         {
-            setZoomFactor (1.0f, true);
+            setZoomFactor (targetZoom, true);
+            zoomHandled = true;
+        }
+        else if (isHomePreset (preset))
+        {
+            setZoomFactor (targetZoom, true);
             zoomHandled = true;
         }
         else
@@ -601,6 +643,16 @@ void SpeakerVisualizerComponent::paint (juce::Graphics& g)
 
     std::sort (drawOrder.begin(), drawOrder.end(),
                [] (const DisplaySpeaker* a, const DisplaySpeaker* b) { return a->depth > b->depth; });
+
+    if (cameraInside)
+    {
+        const auto newEnd = std::remove_if (drawOrder.begin(), drawOrder.end(),
+                                            [] (const DisplaySpeaker* speakerPtr)
+                                            {
+                                                return speakerPtr->depth <= insideNearPlane;
+                                            });
+        drawOrder.erase (newEnd, drawOrder.end());
+    }
 
     switch (visualizationMode)
     {
@@ -911,7 +963,7 @@ void SpeakerVisualizerComponent::drawRadiationHeatmap (juce::Graphics& g)
             continue;
 
         const auto projected = projectPoint (heatmapPoints[i]);
-        if (projected.depth < 0.05f)
+        if (projected.depth <= insideNearPlane)
             continue;
 
         const auto normalised = juce::jlimit (0.0f, 1.0f, level / normaliser);
@@ -1038,10 +1090,17 @@ void SpeakerVisualizerComponent::updateTrails()
 {
     for (auto& speaker : speakers)
     {
-        if (! speaker.trail.empty())
+        if (cameraInside && speaker.depth <= insideNearPlane)
         {
-            if (speaker.projected.getDistanceFrom (speaker.trail.back()) < 0.25f)
-                continue;
+            if (! speaker.trail.empty())
+                speaker.trail.clear();
+            continue;
+        }
+
+        if (! speaker.trail.empty()
+            && speaker.projected.getDistanceFrom (speaker.trail.back()) < 0.25f)
+        {
+            continue;
         }
 
         speaker.trail.push_back (speaker.projected);
@@ -1087,7 +1146,10 @@ void SpeakerVisualizerComponent::applyZoomFactorToCamera()
     cameraBaseDistance = juce::jmax (0.001f, cameraBaseDistance);
     zoomFactor = juce::jlimit (minZoomFactor, maxZoomFactor, zoomFactor);
 
-    cameraDistance = juce::jmax (0.05f, cameraBaseDistance);
+    if (cameraInside)
+        cameraDistance = 0.0f;
+    else
+        cameraDistance = juce::jmax (0.05f, cameraBaseDistance);
 
     updateProjectionScale();
 }
