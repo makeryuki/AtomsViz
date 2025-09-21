@@ -57,6 +57,12 @@ public:
         float baseDistance{ 1.0f };
         float zoom{ 1.0f };
     };
+    struct BandColourWeights
+    {
+        float low{ 1.0f };
+        float mid{ 1.0f };
+        float high{ 1.0f };
+    };
 
     explicit SpeakerVisualizerComponent (AtmosVizAudioProcessor&);
     ~SpeakerVisualizerComponent() override = default;
@@ -80,6 +86,16 @@ public:
 
     void setVisualizationScaleAdjustment (float value);
     float getVisualizationScaleAdjustment() const noexcept { return visualizationScaleSliderValue; }
+
+    void setBandColourWeights (BandColourWeights weights);
+    BandColourWeights getBandColourWeights() const noexcept { return bandColourWeights; }
+
+    void setHeatmapDensity (int level);
+    int getHeatmapDensity() const noexcept { return heatmapDensityLevel; }
+
+    juce::Colour colourForBandMix (float lowShare, float midShare, float highShare) const;
+    juce::Colour colourForHeatmapRatio (float ratio) const;
+    bool isCameraInside() const noexcept { return cameraInside; }
 
     std::function<void (float)> onZoomFactorChanged;
     std::function<void (CameraPreset)> onPresetChanged;
@@ -132,6 +148,7 @@ private:
     float reachForLevel (const DisplaySpeaker& speaker, float level, float shaping = 0.65f) const;
     float visualLevelForSpeaker (const DisplaySpeaker& speaker) const;
     juce::Colour colourForLevel (float level, float maxLevel) const;
+    juce::Colour colourFromShares (float lowShare, float midShare, float highShare, float brightness) const;
     juce::AffineTransform rotationTransform (juce::Point<float> centre, juce::Point<float> direction, float width, float height) const;
 
     juce::Colour colourForBands (const AtmosVizAudioProcessor::FrequencyBands& bands, bool isLfe) const;
@@ -181,6 +198,8 @@ private:
     static constexpr size_t trailHistoryLength = 32;
     std::vector<juce::Vector3D<float>> heatmapPoints;
     float cachedHeatmapMaxLevel = 0.0f;
+    BandColourWeights bandColourWeights{};
+    int heatmapDensityLevel = 2;
     float visualizationScale = 1.0f;
     float visualizationScaleSliderValue = 0.0f;
 
@@ -191,8 +210,68 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpeakerVisualizerComponent)
 };
 
+class ColourMixPadComponent : public juce::Component
+{
+public:
+    ColourMixPadComponent();
+
+    void setWeights (SpeakerVisualizerComponent::BandColourWeights newWeights);
+    SpeakerVisualizerComponent::BandColourWeights getWeights() const noexcept { return weights; }
+
+    void paint (juce::Graphics& g) override;
+    void resized() override;
+    void mouseDown (const juce::MouseEvent& e) override;
+    void mouseDrag (const juce::MouseEvent& e) override;
+    void mouseUp (const juce::MouseEvent& e) override;
+
+    std::function<void (SpeakerVisualizerComponent::BandColourWeights)> onWeightsChanged;
+
+private:
+    juce::Rectangle<float> getTriangleBounds() const;
+    juce::Point<float> getCorner (int index) const;
+    juce::Point<float> getCentre() const;
+    juce::Point<float> getHandlePosition (int index) const;
+    SpeakerVisualizerComponent::BandColourWeights getNormalisedWeights() const;
+    void updateWeightsInternal (SpeakerVisualizerComponent::BandColourWeights newWeights, bool sendCallback);
+    float distanceToHandle (int index, juce::Point<float> point) const;
+    float shareForPoint (int index, juce::Point<float> point) const;
+
+    SpeakerVisualizerComponent::BandColourWeights weights { 1.0f, 1.0f, 1.0f };
+    SpeakerVisualizerComponent::BandColourWeights startWeights {};
+    SpeakerVisualizerComponent::BandColourWeights startNormalised {};
+    int activeHandle = -1;
+    float startTotal = 3.0f;
+    bool suppressCallback = false;
+};
+
+class ColourLegendComponent : public juce::Component
+{
+public:
+    struct Stop
+    {
+        float position = 0.0f;
+        juce::Colour colour;
+    };
+
+    void setLegend (juce::String newTitle,
+                    std::vector<Stop> newStops,
+                    juce::String left,
+                    juce::String centre,
+                    juce::String right);
+
+    void paint (juce::Graphics& g) override;
+
+private:
+    juce::String title;
+    juce::String leftLabel;
+    juce::String centreLabel;
+    juce::String rightLabel;
+    std::vector<Stop> stops;
+};
+
 class AtmosVizAudioProcessorEditor  : public juce::AudioProcessorEditor,
-                                      private juce::Slider::Listener
+                                      private juce::Slider::Listener,
+                                      private juce::ComponentListener
 {
 public:
     explicit AtmosVizAudioProcessorEditor (AtmosVizAudioProcessor&);
@@ -206,12 +285,24 @@ private:
     void setupZoomSlider();
     void setupSliderModeSelector();
     void setupVisualizationSelector();
+    void setupHeatmapDensitySlider();
+    void setupBandWeightControls();
+    void setupColourLegend();
     void setCameraPreset (SpeakerVisualizerComponent::CameraPreset preset);
     void updateCameraButtonStates();
     void updateVisualizationSelector();
     void updateSliderConfiguration();
+    void updateVisualizationControlsVisibility();
+    void updateHeatmapDensityValueLabel();
+    void updateLegendContent();
+
+    void applyBandWeightChanges();
+    void showColourMixPad();
+    void closeColourMixPad();
+    void syncBandControlsWithWeights (SpeakerVisualizerComponent::BandColourWeights weights);
 
     void sliderValueChanged (juce::Slider* slider) override;
+    void componentBeingDeleted (juce::Component&) override;
 
     AtmosVizAudioProcessor& audioProcessor;
     std::unique_ptr<SpeakerVisualizerComponent> visualizer;
@@ -229,12 +320,34 @@ private:
     std::vector<CameraButtonInfo> cameraButtons;
     std::vector<size_t> outsideButtonIndices;
     std::vector<size_t> insideButtonIndices;
+    ColourLegendComponent colourLegend;
+    juce::Slider heatmapDensitySlider;
+    juce::Label heatmapDensityLabel;
+    juce::Label heatmapDensityValueLabel;
+    juce::Label bandWeightTitleLabel;
+    juce::Slider lowWeightSlider;
+    juce::Slider midWeightSlider;
+    juce::Slider highWeightSlider;
+    juce::Label lowWeightLabel;
+    juce::Label midWeightLabel;
+    juce::Label highWeightLabel;
+    juce::TextButton colourPadButton;
+    std::vector<juce::Rectangle<int>> sectionDividers;
     juce::Slider zoomSlider;
     juce::ComboBox sliderModeCombo;
     juce::ComboBox visualizationCombo;
     juce::Label  visualizationLabel;
     juce::Label  outsideLabel;
     juce::Label  insideLabel;
+    juce::CallOutBox* colourPadCallout = nullptr;
+    ColourMixPadComponent* colourPadComponent = nullptr;
+    bool suppressBandSliderCallbacks = false;
+    bool suppressPadCallback = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AtmosVizAudioProcessorEditor)
 };
+
+
+
+
+

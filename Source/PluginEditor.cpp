@@ -113,20 +113,14 @@ void SpeakerVisualizerComponent::updateProjectionScale()
     const auto bounds = getLocalBounds().toFloat();
     const auto minDimension = std::max (1.0f, std::min (bounds.getWidth(), bounds.getHeight()));
 
-    if (cameraInside)
-    {
-        baseProjectionScale = minDimension * insideProjectionScale;
-        projectionScale = baseProjectionScale;
-        return;
-    }
-
-    const auto fill = outsideProjectionScale;
+    const auto fill = cameraInside ? insideProjectionScale : outsideProjectionScale;
     const auto cosYaw   = std::cos (yaw);
     const auto sinYaw   = std::sin (yaw);
     const auto cosPitch = std::cos (pitch);
     const auto sinPitch = std::sin (pitch);
 
     float maxExtent = 0.0f;
+    const auto referenceDistance = cameraInside ? cameraDistance : cameraBaseDistance;
 
     for (const auto& vertex : roomVerticesModel)
     {
@@ -135,12 +129,12 @@ void SpeakerVisualizerComponent::updateProjectionScale()
         const auto y2 = vertex.y * cosPitch - z1 * sinPitch;
         const auto z2 = vertex.y * sinPitch + z1 * cosPitch;
 
-        const auto depth  = cameraBaseDistance - z2;
-        const auto factor = cameraBaseDistance / std::max (0.2f, depth);
-        const auto scaleFactor = cameraInside ? factor : 1.0f;
+        const auto depth = referenceDistance - z2;
+        const auto clampedDepth = std::max (0.2f, std::abs (depth));
+        const auto perspectiveScale = cameraInside ? (referenceDistance / clampedDepth) : 1.0f;
 
-        maxExtent = std::max (maxExtent, std::abs (x1) * scaleFactor);
-        maxExtent = std::max (maxExtent, std::abs (y2) * scaleFactor);
+        maxExtent = std::max (maxExtent, std::abs (x1) * perspectiveScale);
+        maxExtent = std::max (maxExtent, std::abs (y2) * perspectiveScale);
     }
 
     if (maxExtent < 1.0e-4f)
@@ -393,6 +387,39 @@ void SpeakerVisualizerComponent::setVisualizationScaleAdjustment (float value)
         onVisualizationScaleChanged (visualizationScaleSliderValue);
 }
 
+void SpeakerVisualizerComponent::setBandColourWeights (BandColourWeights weights)
+{
+    weights.low = std::max (0.0f, weights.low);
+    weights.mid = std::max (0.0f, weights.mid);
+    weights.high = std::max (0.0f, weights.high);
+
+    if (weights.low + weights.mid + weights.high <= 1.0e-6f)
+    {
+        weights.low = weights.mid = weights.high = 1.0f;
+    }
+
+    const auto changed = std::abs (weights.low - bandColourWeights.low) > 1.0e-4f
+                       || std::abs (weights.mid - bandColourWeights.mid) > 1.0e-4f
+                       || std::abs (weights.high - bandColourWeights.high) > 1.0e-4f;
+
+    if (! changed)
+        return;
+
+    bandColourWeights = weights;
+    repaint();
+}
+
+void SpeakerVisualizerComponent::setHeatmapDensity (int level)
+{
+    const auto clamped = juce::jlimit (1, 5, level);
+    if (clamped == heatmapDensityLevel)
+        return;
+
+    heatmapDensityLevel = clamped;
+    updateHeatmapCache();
+    repaint();
+}
+
 void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
 {
     currentPreset = preset;
@@ -478,18 +505,85 @@ void SpeakerVisualizerComponent::mouseWheelMove (const juce::MouseEvent& e, cons
 juce::Colour SpeakerVisualizerComponent::colourForBands (const AtmosVizAudioProcessor::FrequencyBands& bands, bool isLfe) const
 {
     if (isLfe)
-        return juce::Colours::orange.brighter (0.15f);
+        return juce::Colour::fromFloatRGBA (0.95f, 0.58f, 0.18f, 1.0f);
 
-    const auto total = bands.low + bands.mid + bands.high + 1.0e-4f;
-    const auto low   = bands.low  / total;
-    const auto mid   = bands.mid  / total;
-    const auto high  = bands.high / total;
+    const auto totalEnergy = bands.low + bands.mid + bands.high;
+    if (totalEnergy <= 1.0e-6f)
+        return juce::Colour::fromFloatRGBA (0.22f, 0.24f, 0.28f, 1.0f);
 
-    return juce::Colour::fromFloatRGBA (
-        juce::jlimit (0.0f, 1.0f, high + 0.25f * mid),
-        juce::jlimit (0.0f, 1.0f, mid + 0.20f * low),
-        juce::jlimit (0.0f, 1.0f, low),
-        1.0f);
+    const auto lowShare  = bands.low  / totalEnergy;
+    const auto midShare  = bands.mid  / totalEnergy;
+    const auto highShare = bands.high / totalEnergy;
+    const auto brightness = juce::jlimit (0.4f, 1.0f, 0.45f + juce::jlimit (0.0f, 1.0f, totalEnergy) * 0.35f);
+
+    return colourFromShares (lowShare, midShare, highShare, brightness);
+}
+
+juce::Colour SpeakerVisualizerComponent::colourFromShares (float lowShare, float midShare, float highShare, float brightness) const
+{
+    const auto lowWeight  = std::max (0.0f, bandColourWeights.low);
+    const auto midWeight  = std::max (0.0f, bandColourWeights.mid);
+    const auto highWeight = std::max (0.0f, bandColourWeights.high);
+
+    auto weightedLow  = lowShare  * lowWeight;
+    auto weightedMid  = midShare  * midWeight;
+    auto weightedHigh = highShare * highWeight;
+
+    const auto weightSum = weightedLow + weightedMid + weightedHigh;
+    if (weightSum <= 1.0e-6f)
+        return juce::Colour::fromFloatRGBA (0.22f, 0.24f, 0.28f, 1.0f);
+
+    weightedLow  /= weightSum;
+    weightedMid  /= weightSum;
+    weightedHigh /= weightSum;
+
+    const juce::Vector3D<float> lowBase  { 0.16f, 0.32f, 0.92f };
+    const juce::Vector3D<float> midBase  { 0.24f, 0.82f, 0.34f };
+    const juce::Vector3D<float> highBase { 0.93f, 0.34f, 0.28f };
+
+    auto mix = lowBase * weightedLow + midBase * weightedMid + highBase * weightedHigh;
+    mix *= juce::jlimit (0.25f, 1.2f, brightness);
+    mix += juce::Vector3D<float> { 0.035f, 0.035f, 0.035f };
+
+    mix.x = juce::jlimit (0.0f, 1.0f, mix.x);
+    mix.y = juce::jlimit (0.0f, 1.0f, mix.y);
+    mix.z = juce::jlimit (0.0f, 1.0f, mix.z);
+
+    return juce::Colour::fromFloatRGBA (mix.x, mix.y, mix.z, 1.0f);
+}
+
+juce::Colour SpeakerVisualizerComponent::colourForBandMix (float lowShare, float midShare, float highShare) const
+{
+    const auto sum = std::max (1.0e-6f, std::abs (lowShare) + std::abs (midShare) + std::abs (highShare));
+    return colourFromShares (std::max (0.0f, lowShare) / sum,
+                             std::max (0.0f, midShare) / sum,
+                             std::max (0.0f, highShare) / sum,
+                             0.75f);
+}
+
+juce::Colour SpeakerVisualizerComponent::colourForHeatmapRatio (float ratio) const
+{
+    ratio = juce::jlimit (0.0f, 1.0f, ratio);
+
+    float lowShare = 0.0f;
+    float midShare = 0.0f;
+    float highShare = 0.0f;
+
+    if (ratio < 0.5f)
+    {
+        const auto t = ratio / 0.5f;
+        lowShare = 1.0f - t;
+        midShare = t;
+    }
+    else
+    {
+        const auto t = (ratio - 0.5f) / 0.5f;
+        midShare = 1.0f - t;
+        highShare = t;
+    }
+
+    const auto brightness = juce::jlimit (0.35f, 1.0f, 0.45f + ratio * 0.5f);
+    return colourFromShares (lowShare, midShare, highShare, brightness);
 }
 
 void SpeakerVisualizerComponent::paint (juce::Graphics& g)
@@ -906,9 +1000,13 @@ void SpeakerVisualizerComponent::updateHeatmapCache()
 {
     heatmapPoints.clear();
 
-    const int depthSteps = 7;
-    const int widthSteps = 7;
-    const int heightSteps = 5;
+    static constexpr std::array<int, 5> lateralSteps { 5, 7, 9, 11, 13 };
+    static constexpr std::array<int, 5> verticalSteps { 3, 5, 7, 9, 11 };
+
+    const auto index = juce::jlimit (0, (int) lateralSteps.size() - 1, heatmapDensityLevel - 1);
+    const int depthSteps = lateralSteps[(size_t) index];
+    const int widthSteps = lateralSteps[(size_t) index];
+    const int heightSteps = verticalSteps[(size_t) index];
 
     const auto depthHalf = roomDimensions.depth * 0.5f;
     const auto widthHalf = roomDimensions.width * 0.5f;
@@ -919,15 +1017,15 @@ void SpeakerVisualizerComponent::updateHeatmapCache()
 
     for (int y = 0; y < heightSteps; ++y)
     {
-        const auto fy = juce::jmap ((float) y, 0.0f, (float) (heightSteps - 1), floorY + 0.15f, ceilingY - 0.15f);
+        const auto fy = juce::jmap ((float) y, 0.0f, (float) (heightSteps - 1), floorY + 0.12f, ceilingY - 0.12f);
 
         for (int z = 0; z < widthSteps; ++z)
         {
-            const auto fz = juce::jmap ((float) z, 0.0f, (float) (widthSteps - 1), -widthHalf * 0.9f, widthHalf * 0.9f);
+            const auto fz = juce::jmap ((float) z, 0.0f, (float) (widthSteps - 1), -widthHalf * 0.92f, widthHalf * 0.92f);
 
             for (int x = 0; x < depthSteps; ++x)
             {
-                const auto fx = juce::jmap ((float) x, 0.0f, (float) (depthSteps - 1), -depthHalf * 0.9f, depthHalf * 0.9f);
+                const auto fx = juce::jmap ((float) x, 0.0f, (float) (depthSteps - 1), -depthHalf * 0.92f, depthHalf * 0.92f);
                 heatmapPoints.emplace_back (fx, fy, fz);
             }
         }
@@ -957,12 +1055,12 @@ juce::Colour SpeakerVisualizerComponent::colourForLevel (float level, float maxL
     if (maxLevel <= 1.0e-6f)
         return juce::Colours::transparentBlack;
 
-    const auto ratio = juce::jlimit (0.0f, 1.0f, level / maxLevel);
-    const auto hue = juce::jmap (ratio, 0.62f, 0.02f);
-    const auto saturation = juce::jlimit (0.4f, 0.95f, 0.45f + ratio * 0.5f);
-    const auto brightness = juce::jlimit (0.35f, 1.0f, 0.4f + ratio * 0.6f);
+    const auto ratio = juce::jlimit (0.0f, 1.0f, level / juce::jmax (maxLevel, 1.0e-6f));
 
-    return juce::Colour::fromHSV (hue, saturation, brightness, 1.0f);
+    if (ratio <= 1.0e-5f)
+        return juce::Colour::fromFloatRGBA (0.18f, 0.21f, 0.28f, 1.0f);
+
+    return colourForHeatmapRatio (ratio);
 }
 
 juce::AffineTransform SpeakerVisualizerComponent::rotationTransform (juce::Point<float> centre,
@@ -989,14 +1087,7 @@ void SpeakerVisualizerComponent::applyZoomFactorToCamera()
     cameraBaseDistance = juce::jmax (0.001f, cameraBaseDistance);
     zoomFactor = juce::jlimit (minZoomFactor, maxZoomFactor, zoomFactor);
 
-    if (cameraInside)
-    {
-        cameraDistance = cameraBaseDistance / juce::jmax (0.05f, zoomFactor);
-    }
-    else
-    {
-        cameraDistance = cameraBaseDistance;
-    }
+    cameraDistance = juce::jmax (0.05f, cameraBaseDistance);
 
     updateProjectionScale();
 }
@@ -1089,6 +1180,340 @@ void SpeakerVisualizerComponent::resized() {}
 //==============================================================================
 // AtmosVizAudioProcessorEditor
 //==============================================================================
+namespace
+{
+    constexpr float kPadHandleRadius = 9.0f;
+    constexpr float kPadHandleOutline = 1.4f;
+
+    SpeakerVisualizerComponent::BandColourWeights normalisedWeights (const SpeakerVisualizerComponent::BandColourWeights& weights)
+    {
+        const auto total = weights.low + weights.mid + weights.high;
+        if (total <= 1.0e-6f)
+            return { 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f };
+
+        return { weights.low / total, weights.mid / total, weights.high / total };
+    }
+
+    juce::String heatmapDensityLabelText (int level)
+    {
+        static const char* const labels[] { "Coarse", "Low", "Medium", "High", "Ultra" };
+        const auto index = juce::jlimit (0, 4, level - 1);
+        return juce::String (labels[index]);
+    }
+}
+
+ColourMixPadComponent::ColourMixPadComponent()
+{
+    setInterceptsMouseClicks (true, true);
+}
+
+void ColourMixPadComponent::setWeights (SpeakerVisualizerComponent::BandColourWeights newWeights)
+{
+    updateWeightsInternal (newWeights, false);
+}
+
+juce::Rectangle<float> ColourMixPadComponent::getTriangleBounds() const
+{
+    auto area = getLocalBounds().toFloat().reduced (20.0f, 28.0f);
+    if (area.getHeight() < 1.0f || area.getWidth() < 1.0f)
+        return getLocalBounds().toFloat();
+    return area;
+}
+
+juce::Point<float> ColourMixPadComponent::getCorner (int index) const
+{
+    const auto bounds = getTriangleBounds();
+    const auto bottomY = bounds.getBottom();
+    switch (index)
+    {
+        case 0: return { bounds.getX(), bottomY };
+        case 1: return { bounds.getRight(), bottomY };
+        case 2: return { bounds.getCentreX(), bounds.getY() };
+        default: return bounds.getCentre();
+    }
+}
+
+juce::Point<float> ColourMixPadComponent::getCentre() const
+{
+    const auto a = getCorner (0);
+    const auto b = getCorner (1);
+    const auto c = getCorner (2);
+    return { (a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f };
+}
+
+SpeakerVisualizerComponent::BandColourWeights ColourMixPadComponent::getNormalisedWeights() const
+{
+    return normalisedWeights (weights);
+}
+
+juce::Point<float> ColourMixPadComponent::getHandlePosition (int index) const
+{
+    const auto centre = getCentre();
+    const auto corner = getCorner (index);
+    const auto normalised = getNormalisedWeights();
+    const std::array<float, 3> shares { normalised.low, normalised.mid, normalised.high };
+    const auto share = juce::jlimit (0.0f, 1.0f, shares[juce::jlimit (0, 2, index)]);
+    return centre + (corner - centre) * share;
+}
+
+void ColourMixPadComponent::updateWeightsInternal (SpeakerVisualizerComponent::BandColourWeights newWeights, bool sendCallback)
+{
+    newWeights.low = std::max (0.0f, newWeights.low);
+    newWeights.mid = std::max (0.0f, newWeights.mid);
+    newWeights.high = std::max (0.0f, newWeights.high);
+
+    if (std::abs (newWeights.low - weights.low) < 1.0e-4f
+        && std::abs (newWeights.mid - weights.mid) < 1.0e-4f
+        && std::abs (newWeights.high - weights.high) < 1.0e-4f)
+        return;
+
+    weights = newWeights;
+    repaint();
+
+    if (sendCallback && onWeightsChanged)
+        onWeightsChanged (weights);
+}
+
+float ColourMixPadComponent::distanceToHandle (int index, juce::Point<float> point) const
+{
+    return getHandlePosition (index).getDistanceFrom (point);
+}
+
+float ColourMixPadComponent::shareForPoint (int index, juce::Point<float> point) const
+{
+    const auto centre = getCentre();
+    const auto corner = getCorner (index);
+    const auto vector = corner - centre;
+    const auto lengthSquared = vector.getDistanceSquaredFromOrigin();
+    if (lengthSquared <= 1.0e-6f)
+        return 0.0f;
+
+    const auto relative = (point - centre).getDotProduct (vector) / lengthSquared;
+    return juce::jlimit (0.0f, 1.0f, relative);
+}
+
+void ColourMixPadComponent::resized()
+{
+    repaint();
+}
+
+void ColourMixPadComponent::paint (juce::Graphics& g)
+{
+    g.fillAll (juce::Colours::black.withAlpha (0.82f));
+
+    const auto bounds = getTriangleBounds();
+    juce::Path triangle;
+    triangle.addTriangle (getCorner (0), getCorner (1), getCorner (2));
+
+    g.setColour (juce::Colours::darkgrey.withAlpha (0.35f));
+    g.fillPath (triangle);
+
+    g.setColour (juce::Colours::white.withAlpha (0.55f));
+    g.strokePath (triangle, juce::PathStrokeType (1.4f));
+
+    const auto centre = getCentre();
+    const std::array<juce::Colour, 3> bandColours
+    {
+        juce::Colour::fromFloatRGBA (0.35f, 0.55f, 0.95f, 1.0f),
+        juce::Colour::fromFloatRGBA (0.35f, 0.85f, 0.45f, 1.0f),
+        juce::Colour::fromFloatRGBA (0.98f, 0.45f, 0.35f, 1.0f)
+    };
+    const std::array<juce::String, 3> labels { "Low", "Mid", "High" };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto corner = getCorner (i);
+        g.setColour (bandColours[i].withAlpha (0.35f));
+        g.drawLine (juce::Line<float> (centre, corner), 1.1f);
+
+        auto labelArea = juce::Rectangle<float> (corner.x - 32.0f, corner.y - 20.0f, 64.0f, 18.0f);
+        if (i == 2)
+            labelArea.setCentre (corner.x, corner.y - 18.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.8f));
+        g.drawFittedText (labels[i], labelArea.toNearestInt(), juce::Justification::centred, 1);
+    }
+
+    const auto normalised = getNormalisedWeights();
+    const std::array<float, 3> shares { normalised.low, normalised.mid, normalised.high };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto handle = getHandlePosition (i);
+        g.setColour (bandColours[i].withAlpha (0.9f));
+        g.fillEllipse (handle.x - kPadHandleRadius,
+                       handle.y - kPadHandleRadius,
+                       kPadHandleRadius * 2.0f,
+                       kPadHandleRadius * 2.0f);
+
+        g.setColour (juce::Colours::white.withAlpha (0.75f));
+        g.drawEllipse (handle.x - kPadHandleRadius,
+                       handle.y - kPadHandleRadius,
+                       kPadHandleRadius * 2.0f,
+                       kPadHandleRadius * 2.0f,
+                       kPadHandleOutline);
+
+        auto valueLabel = juce::Rectangle<int> ((int) std::round (handle.x - 28.0f),
+                                                (int) std::round (handle.y - 36.0f),
+                                                56,
+                                                18);
+        g.drawFittedText (juce::String (juce::roundToInt (shares[i] * 100.0f)) + " %",
+                          valueLabel,
+                          juce::Justification::centred,
+                          1);
+    }
+}
+
+void ColourMixPadComponent::mouseDown (const juce::MouseEvent& e)
+{
+    const auto pos = e.position;
+    activeHandle = -1;
+    for (int i = 0; i < 3; ++i)
+    {
+        if (distanceToHandle (i, pos) <= kPadHandleRadius * 1.6f)
+        {
+            activeHandle = i;
+            break;
+        }
+    }
+
+    if (activeHandle < 0)
+        return;
+
+    startWeights = weights;
+    startNormalised = getNormalisedWeights();
+    startTotal = weights.low + weights.mid + weights.high;
+    if (startTotal <= 1.0e-6f)
+    {
+        startTotal = 3.0f;
+        startWeights = { 1.0f, 1.0f, 1.0f };
+        startNormalised = normalisedWeights (startWeights);
+    }
+}
+
+void ColourMixPadComponent::mouseDrag (const juce::MouseEvent& e)
+{
+    if (activeHandle < 0)
+        return;
+
+    const auto newShare = shareForPoint (activeHandle, e.position);
+
+    std::array<float, 3> startShares { startNormalised.low, startNormalised.mid, startNormalised.high };
+    std::array<float, 3> newShares = startShares;
+
+    const float otherSum = startShares[0] + startShares[1] + startShares[2] - startShares[activeHandle];
+    const float remaining = 1.0f - newShare;
+    newShares[activeHandle] = newShare;
+
+    if (otherSum <= 1.0e-6f)
+    {
+        const int first = (activeHandle + 1) % 3;
+        const int second = (activeHandle + 2) % 3;
+        newShares[first] = remaining * 0.5f;
+        newShares[second] = remaining - newShares[first];
+    }
+    else
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            if (i == activeHandle)
+                continue;
+            newShares[i] = juce::jlimit (0.0f, 1.0f, (startShares[i] / otherSum) * remaining);
+        }
+    }
+
+    const auto total = std::max (startTotal, 1.0e-3f);
+    SpeakerVisualizerComponent::BandColourWeights newWeights
+    {
+        newShares[0] * total,
+        newShares[1] * total,
+        newShares[2] * total
+    };
+
+    updateWeightsInternal (newWeights, true);
+}
+
+void ColourMixPadComponent::mouseUp (const juce::MouseEvent&)
+{
+    activeHandle = -1;
+}void ColourLegendComponent::setLegend (juce::String newTitle,
+                                                 std::vector<Stop> newStops,
+                                                 juce::String left,
+                                                 juce::String centre,
+                                                 juce::String right)
+{
+    title = std::move (newTitle);
+    leftLabel = std::move (left);
+    centreLabel = std::move (centre);
+    rightLabel = std::move (right);
+
+    std::sort (newStops.begin(), newStops.end(),
+               [] (const Stop& a, const Stop& b) { return a.position < b.position; });
+
+    for (auto& stop : newStops)
+        stop.position = juce::jlimit (0.0f, 1.0f, stop.position);
+
+    stops = std::move (newStops);
+    repaint();
+}
+
+void ColourLegendComponent::paint (juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+    if (bounds.getWidth() < 1.0f || bounds.getHeight() < 1.0f)
+        return;
+
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillRoundedRectangle (bounds, 6.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (0.18f));
+    g.drawRoundedRectangle (bounds, 6.0f, 1.0f);
+
+    auto content = bounds.reduced (8.0f, 6.0f);
+    auto titleArea = content.removeFromTop (16.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.85f));
+    g.setFont (juce::Font (13.0f, juce::Font::bold));
+    g.drawFittedText (title, titleArea.toNearestInt(), juce::Justification::centredLeft, 1);
+
+    content.removeFromTop (4.0f);
+    auto gradientArea = content.removeFromTop (content.getHeight() * 0.55f).reduced (4.0f, 0.0f);
+
+    if (! stops.empty())
+    {
+        if (stops.size() == 1)
+        {
+            g.setColour (stops.front().colour);
+            g.fillRoundedRectangle (gradientArea, 4.0f);
+        }
+        else
+        {
+            auto first = stops.front();
+            auto last = stops.back();
+            juce::ColourGradient gradient (first.colour, gradientArea.getX(), gradientArea.getCentreY(),
+                                           last.colour, gradientArea.getRight(), gradientArea.getCentreY(), false);
+            for (size_t i = 1; i + 1 < stops.size(); ++i)
+                gradient.addColour (stops[i].position, stops[i].colour);
+
+            g.setGradientFill (gradient);
+            g.fillRoundedRectangle (gradientArea, 4.0f);
+        }
+
+        g.setColour (juce::Colours::white.withAlpha (0.25f));
+        g.drawRoundedRectangle (gradientArea, 4.0f, 1.0f);
+    }
+
+    auto labelsArea = content.removeFromBottom (16.0f);
+    auto thirdWidth = labelsArea.getWidth() / 3.0f;
+    auto leftArea = labelsArea.removeFromLeft (thirdWidth);
+    auto centreArea = labelsArea.removeFromLeft (thirdWidth);
+    auto rightArea = labelsArea;
+
+    g.setColour (juce::Colours::white.withAlpha (0.75f));
+    g.setFont (juce::Font (11.0f));
+    g.drawFittedText (leftLabel, leftArea.toNearestInt(), juce::Justification::centred, 1);
+    g.drawFittedText (centreLabel, centreArea.toNearestInt(), juce::Justification::centred, 1);
+    g.drawFittedText (rightLabel, rightArea.toNearestInt(), juce::Justification::centred, 1);
+}
+
 AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
@@ -1112,6 +1537,8 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     visualizer->onVisualizationModeChanged = [this] (SpeakerVisualizerComponent::VisualizationMode)
     {
         updateVisualizationSelector();
+        updateVisualizationControlsVisibility();
+        updateLegendContent();
     };
 
     visualizer->onVisualizationScaleChanged = [this] (float value)
@@ -1123,6 +1550,12 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     setupZoomSlider();
     setupSliderModeSelector();
     setupVisualizationSelector();
+    setupHeatmapDensitySlider();
+    setupBandWeightControls();
+    setupColourLegend();
+    if (visualizer != nullptr)
+        syncBandControlsWithWeights (visualizer->getBandColourWeights());
+
 
     outsideLabel.setText ("Outside", juce::dontSendNotification);
     outsideLabel.setJustificationType (juce::Justification::centredLeft);
@@ -1139,6 +1572,8 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     updateCameraButtonStates();
     updateSliderConfiguration();
     updateVisualizationSelector();
+    updateVisualizationControlsVisibility();
+    updateLegendContent();
 
     setResizable (true, true);
     setResizeLimits (600, 400, 1600, 1000);
@@ -1147,6 +1582,7 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
 
 AtmosVizAudioProcessorEditor::~AtmosVizAudioProcessorEditor()
 {
+    closeColourMixPad();
     zoomSlider.removeListener (this);
 }
 
@@ -1272,6 +1708,137 @@ void AtmosVizAudioProcessorEditor::setupVisualizationSelector()
     addAndMakeVisible (visualizationCombo);
 }
 
+void AtmosVizAudioProcessorEditor::setupHeatmapDensitySlider()
+{
+    heatmapDensityLabel.setText ("Heatmap Density", juce::dontSendNotification);
+    heatmapDensityLabel.setJustificationType (juce::Justification::centredRight);
+    heatmapDensityLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    heatmapDensityLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (heatmapDensityLabel);
+
+    heatmapDensityValueLabel.setJustificationType (juce::Justification::centredLeft);
+    heatmapDensityValueLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    heatmapDensityValueLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (heatmapDensityValueLabel);
+
+    heatmapDensitySlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    heatmapDensitySlider.setRange (1.0, 5.0, 1.0);
+    heatmapDensitySlider.setDoubleClickReturnValue (true, 2.0);
+    heatmapDensitySlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    heatmapDensitySlider.setPopupDisplayEnabled (true, false, this);
+    heatmapDensitySlider.textFromValueFunction = [] (double value)
+    {
+        return heatmapDensityLabelText ((int) std::round (value));
+    };
+    heatmapDensitySlider.valueFromTextFunction = [] (const juce::String& text)
+    {
+        auto trimmed = text.trim().toLowerCase();
+        if (trimmed.startsWith ("coarse")) return 1.0;
+        if (trimmed.startsWith ("low"))    return 2.0;
+        if (trimmed.startsWith ("medium")) return 3.0;
+        if (trimmed.startsWith ("high"))   return 4.0;
+        if (trimmed.startsWith ("ultra"))  return 5.0;
+        return juce::jlimit (1.0, 5.0, text.getDoubleValue());
+    };
+    heatmapDensitySlider.setTooltip ("Adjust the sampling density used for the heatmap");
+    heatmapDensitySlider.onValueChange = [this]
+    {
+        if (visualizer == nullptr)
+            return;
+
+        const auto density = (int) std::round (heatmapDensitySlider.getValue());
+        visualizer->setHeatmapDensity (density);
+        updateHeatmapDensityValueLabel();
+        updateLegendContent();
+    };
+
+    const auto initialDensity = (visualizer != nullptr)
+                                  ? visualizer->getHeatmapDensity()
+                                  : 2;
+    heatmapDensitySlider.setValue (initialDensity, juce::dontSendNotification);
+
+    updateHeatmapDensityValueLabel();
+
+    heatmapDensityLabel.setVisible (false);
+    heatmapDensitySlider.setVisible (false);
+    heatmapDensityValueLabel.setVisible (false);
+    addAndMakeVisible (heatmapDensitySlider);
+}
+
+void AtmosVizAudioProcessorEditor::setupBandWeightControls()
+{
+    auto configureSlider = [] (juce::Slider& slider)
+    {
+        slider.setSliderStyle (juce::Slider::LinearHorizontal);
+        slider.setRange (0.0, 200.0, 1.0);
+        slider.setDoubleClickReturnValue (true, 100.0);
+        slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 64, 20);
+        slider.textFromValueFunction = [] (double value)
+        {
+            return juce::String (juce::roundToInt (value)) + " %";
+        };
+        slider.valueFromTextFunction = [] (const juce::String& text)
+        {
+            return juce::jlimit (0.0, 200.0, text.upToFirstOccurrenceOf ("%", false, false).getDoubleValue());
+        };
+    };
+
+    configureSlider (lowWeightSlider);
+    configureSlider (midWeightSlider);
+    configureSlider (highWeightSlider);
+
+    auto configureLabel = [] (juce::Label& label, const juce::String& text, juce::Colour colour)
+    {
+        label.setText (text, juce::dontSendNotification);
+        label.setJustificationType (juce::Justification::centredLeft);
+        label.setColour (juce::Label::textColourId, colour);
+        label.setInterceptsMouseClicks (false, false);
+    };
+
+    configureLabel (lowWeightLabel,  "Low",  juce::Colour::fromFloatRGBA (0.45f, 0.65f, 1.0f, 0.95f));
+    configureLabel (midWeightLabel,  "Mid",  juce::Colour::fromFloatRGBA (0.45f, 0.9f, 0.45f, 0.95f));
+    configureLabel (highWeightLabel, "High", juce::Colour::fromFloatRGBA (0.98f, 0.42f, 0.42f, 0.95f));
+
+    bandWeightTitleLabel.setText ("Band Colour Weights", juce::dontSendNotification);
+    bandWeightTitleLabel.setJustificationType (juce::Justification::centredLeft);
+    bandWeightTitleLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.9f));
+    bandWeightTitleLabel.setInterceptsMouseClicks (false, false);
+    bandWeightTitleLabel.setTooltip ("Adjust how strongly each frequency band influences the colour mix");
+    addAndMakeVisible (bandWeightTitleLabel);
+
+    lowWeightSlider.setTooltip ("Adjust colour emphasis for low-frequency content");
+    midWeightSlider.setTooltip ("Adjust colour emphasis for mid-frequency content");
+    highWeightSlider.setTooltip ("Adjust colour emphasis for high-frequency content");
+
+    addAndMakeVisible (lowWeightLabel);
+    addAndMakeVisible (midWeightLabel);
+    addAndMakeVisible (highWeightLabel);
+    addAndMakeVisible (lowWeightSlider);
+    addAndMakeVisible (midWeightSlider);
+    addAndMakeVisible (highWeightSlider);
+
+    colourPadButton.setButtonText ("Colour Mix Pad");
+    colourPadButton.setTooltip ("Open the triangular colour mixing pad");
+    colourPadButton.onClick = [this] { showColourMixPad(); };
+    addAndMakeVisible (colourPadButton);
+
+    lowWeightSlider.onValueChange = [this] { applyBandWeightChanges(); };
+    midWeightSlider.onValueChange = [this] { applyBandWeightChanges(); };
+    highWeightSlider.onValueChange = [this] { applyBandWeightChanges(); };
+
+    if (visualizer != nullptr)
+        syncBandControlsWithWeights (visualizer->getBandColourWeights());
+    else
+        syncBandControlsWithWeights ({ 1.0f, 1.0f, 1.0f });
+}
+
+void AtmosVizAudioProcessorEditor::setupColourLegend()
+{
+    colourLegend.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (colourLegend);
+}
+
+
 
 void AtmosVizAudioProcessorEditor::updateSliderConfiguration()
 {
@@ -1328,6 +1895,82 @@ void AtmosVizAudioProcessorEditor::updateSliderConfiguration()
 
     sliderModeCombo.setTooltip (useDrawScale ? "Slider controls Draw Scale (relative reach)" : "Slider controls camera zoom (10%-200%)");
 }
+void AtmosVizAudioProcessorEditor::updateVisualizationControlsVisibility()
+{
+    if (visualizer == nullptr)
+    {
+        heatmapDensitySlider.setVisible (false);
+        heatmapDensityLabel.setVisible (false);
+        heatmapDensityValueLabel.setVisible (false);
+        return;
+    }
+
+    const bool showHeatmap = visualizer->getVisualizationMode() == SpeakerVisualizerComponent::VisualizationMode::RadiationHeatmap;
+    heatmapDensitySlider.setVisible (showHeatmap);
+    heatmapDensityLabel.setVisible (showHeatmap);
+    heatmapDensityValueLabel.setVisible (showHeatmap);
+
+    if (showHeatmap)
+    {
+        heatmapDensitySlider.setValue (visualizer->getHeatmapDensity(), juce::dontSendNotification);
+        updateHeatmapDensityValueLabel();
+    }
+
+    if (getWidth() > 0 && getHeight() > 0)
+        resized();
+}
+
+void AtmosVizAudioProcessorEditor::updateHeatmapDensityValueLabel()
+{
+    const auto density = (int) std::round (heatmapDensitySlider.getValue());
+    heatmapDensityValueLabel.setText (heatmapDensityLabelText (density), juce::dontSendNotification);
+}
+
+void AtmosVizAudioProcessorEditor::updateLegendContent()
+{
+    if (visualizer == nullptr)
+        return;
+
+    std::vector<ColourLegendComponent::Stop> stops;
+    const auto mode = visualizer->getVisualizationMode();
+
+    if (mode == SpeakerVisualizerComponent::VisualizationMode::RadiationHeatmap)
+    {
+        static const std::array<float, 5> positions { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+        for (auto position : positions)
+            stops.push_back ({ position, visualizer->colourForHeatmapRatio (position) });
+
+        colourLegend.setLegend ("Heatmap Intensity", std::move (stops), "Low", "Medium", "High");
+        return;
+    }
+
+    stops.push_back ({ 0.0f, visualizer->colourForBandMix (1.0f, 0.0f, 0.0f) });
+    stops.push_back ({ 0.5f, visualizer->colourForBandMix (0.0f, 1.0f, 0.0f) });
+    stops.push_back ({ 1.0f, visualizer->colourForBandMix (0.0f, 0.0f, 1.0f) });
+
+    colourLegend.setLegend ("Frequency Emphasis", std::move (stops), "Low", "Mid", "High");
+}
+
+void AtmosVizAudioProcessorEditor::applyBandWeightChanges()
+{
+    if (visualizer == nullptr || suppressBandSliderCallbacks)
+        return;
+
+    SpeakerVisualizerComponent::BandColourWeights weights
+    {
+        (float) (lowWeightSlider.getValue()  / 100.0),
+        (float) (midWeightSlider.getValue()  / 100.0),
+        (float) (highWeightSlider.getValue() / 100.0)
+    };
+
+    visualizer->setBandColourWeights (weights);
+
+    if (colourPadComponent != nullptr && !suppressPadCallback)
+        colourPadComponent->setWeights (weights);
+
+    updateLegendContent();
+}
+
 
 void AtmosVizAudioProcessorEditor::updateVisualizationSelector()
 {
@@ -1339,8 +1982,89 @@ void AtmosVizAudioProcessorEditor::updateVisualizationSelector()
 
     if (visualizationCombo.getSelectedId() != targetId)
         visualizationCombo.setSelectedId (targetId, juce::dontSendNotification);
+
+    updateVisualizationControlsVisibility();
+    updateLegendContent();
 }
 
+void AtmosVizAudioProcessorEditor::syncBandControlsWithWeights (SpeakerVisualizerComponent::BandColourWeights weights)
+{
+    suppressBandSliderCallbacks = true;
+    lowWeightSlider.setValue (weights.low * 100.0f, juce::dontSendNotification);
+    midWeightSlider.setValue (weights.mid * 100.0f, juce::dontSendNotification);
+    highWeightSlider.setValue (weights.high * 100.0f, juce::dontSendNotification);
+    suppressBandSliderCallbacks = false;
+
+    if (colourPadComponent != nullptr)
+    {
+        suppressPadCallback = true;
+        colourPadComponent->setWeights (weights);
+        suppressPadCallback = false;
+    }
+}
+
+void AtmosVizAudioProcessorEditor::showColourMixPad()
+{
+    if (colourPadCallout != nullptr)
+    {
+        closeColourMixPad();
+        return;
+    }
+
+    auto pad = std::make_unique<ColourMixPadComponent>();
+    auto* padPtr = pad.get();
+
+    constexpr int padWidth = 320;
+    constexpr int padHeight = 280;
+    padPtr->setSize (padWidth, padHeight);
+
+    if (visualizer != nullptr)
+        padPtr->setWeights (visualizer->getBandColourWeights());
+    else
+        padPtr->setWeights ({ 1.0f, 1.0f, 1.0f });
+
+    padPtr->onWeightsChanged = [this] (SpeakerVisualizerComponent::BandColourWeights newWeights)
+    {
+        if (visualizer == nullptr)
+            return;
+
+        suppressPadCallback = true;
+        visualizer->setBandColourWeights (newWeights);
+        suppressPadCallback = false;
+
+        syncBandControlsWithWeights (newWeights);
+        updateLegendContent();
+    };
+
+    auto bounds = colourPadButton.getBoundsInParent();
+    auto& callout = juce::CallOutBox::launchAsynchronously (std::move(pad), bounds, this);
+    callout.addComponentListener (this);
+    colourPadCallout = &callout;
+    colourPadComponent = padPtr;
+}
+
+void AtmosVizAudioProcessorEditor::closeColourMixPad()
+{
+    if (colourPadCallout != nullptr)
+    {
+        colourPadCallout->removeComponentListener (this);
+        colourPadCallout->dismiss();
+        colourPadCallout = nullptr;
+        colourPadComponent = nullptr;
+        suppressPadCallback = false;
+    }
+}
+
+void AtmosVizAudioProcessorEditor::componentBeingDeleted (juce::Component& component)
+{
+    if (colourPadCallout != nullptr && &component == colourPadCallout)
+    {
+        component.removeComponentListener (this);
+        colourPadCallout = nullptr;
+        colourPadComponent = nullptr;
+        suppressPadCallback = false;
+    }
+}
 
 void AtmosVizAudioProcessorEditor::setCameraPreset (SpeakerVisualizerComponent::CameraPreset preset)
 {
@@ -1392,6 +2116,10 @@ void AtmosVizAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setGradientFill (gradient);
     g.fillAll();
+
+    g.setColour (juce::Colours::white.withAlpha (0.14f));
+    for (const auto& divider : sectionDividers)
+        g.fillRect (divider);
 }
 
 void AtmosVizAudioProcessorEditor::resized()
@@ -1403,6 +2131,14 @@ void AtmosVizAudioProcessorEditor::resized()
     const int spacing = juce::roundToInt (5.0f * scale);
     const int marginX = juce::roundToInt (10.0f * scale);
     const int marginY = juce::roundToInt (6.0f * scale);
+
+    sectionDividers.clear();
+    auto addDivider = [this, marginX] (int y)
+    {
+        const int width = std::max (0, getWidth() - marginX * 2);
+        if (width > 0)
+            sectionDividers.emplace_back (marginX, y, width, 1);
+    };
 
     const int sliderModeMinWidth = juce::roundToInt (juce::jmax (120.0f, 140.0f * scale));
     const int sliderMinWidth = juce::roundToInt (juce::jmax (240.0f, 280.0f * scale));
@@ -1416,7 +2152,7 @@ void AtmosVizAudioProcessorEditor::resized()
                                  + spacing
                                  + viewLabelWidth + viewComboMinWidth;
 
-    bool stackCombos = bounds.getWidth() < widthRequirement;
+    const bool stackCombos = bounds.getWidth() < widthRequirement;
 
     auto headerArea = bounds.reduced (marginX, marginY);
     int headerBottom = bounds.getY() + marginY;
@@ -1484,6 +2220,37 @@ void AtmosVizAudioProcessorEditor::resized()
         auto sliderBounds = row.removeFromLeft (sliderWidth);
         zoomSlider.setBounds (sliderBounds.withHeight (controlHeight));
 
+        headerBottom = std::max (headerBottom, sliderBounds.getBottom());
+        if (heatmapDensitySlider.isVisible())
+        {
+            headerArea.removeFromTop (spacing);
+            auto heatmapRow = headerArea.removeFromTop (controlHeight);
+            const int heatmapLabelWidth = juce::roundToInt (juce::jmax (95.0f, 110.0f * scale));
+            const int heatmapValueWidth = juce::roundToInt (juce::jmax (60.0f, 72.0f * scale));
+            const int heatmapSliderWidth = juce::jlimit (juce::roundToInt (140.0f * scale),
+                                                         juce::roundToInt (240.0f * scale),
+                                                         heatmapRow.getWidth());
+
+            auto valueArea = heatmapRow.removeFromRight (heatmapValueWidth);
+            heatmapDensityValueLabel.setBounds (valueArea.withHeight (controlHeight));
+
+            heatmapRow.removeFromRight (spacing);
+            auto sliderArea = heatmapRow.removeFromRight (heatmapSliderWidth);
+            heatmapDensitySlider.setBounds (sliderArea.withHeight (controlHeight));
+
+            heatmapRow.removeFromRight (spacing);
+            auto labelArea = heatmapRow.removeFromRight (heatmapLabelWidth);
+            heatmapDensityLabel.setBounds (labelArea.withHeight (controlHeight));
+
+            headerBottom = std::max (headerBottom, std::max (valueArea.getBottom(), std::max (sliderArea.getBottom(), labelArea.getBottom())));
+        }
+        else
+        {
+            heatmapDensityLabel.setBounds ({});
+            heatmapDensitySlider.setBounds ({});
+            heatmapDensityValueLabel.setBounds ({});
+        }
+
         headerArea.removeFromTop (spacing);
     }
     else
@@ -1496,7 +2263,7 @@ void AtmosVizAudioProcessorEditor::resized()
         const int sliderWidth = juce::jlimit (sliderMinWidth, sliderWidthMax, sliderOnlyRow.getWidth());
         auto sliderBounds = sliderOnlyRow.withSizeKeepingCentre (sliderWidth, controlHeight);
         zoomSlider.setBounds (sliderBounds);
-        headerBottom = sliderBounds.getBottom();
+        headerBottom = std::max (headerBottom, sliderBounds.getBottom());
 
         headerArea.removeFromTop (spacing);
         auto viewRow = headerArea.removeFromTop (controlHeight);
@@ -1504,21 +2271,120 @@ void AtmosVizAudioProcessorEditor::resized()
         visualizationLabel.setBounds (viewLabelArea.withHeight (controlHeight));
         viewRow.removeFromLeft (spacing);
         visualizationCombo.setBounds (viewRow.withHeight (controlHeight));
-        headerBottom = viewRow.getBottom();
+        headerBottom = std::max (headerBottom, viewRow.getBottom());
 
         headerArea.removeFromTop (spacing);
+        if (heatmapDensitySlider.isVisible())
+        {
+            auto heatmapRow = headerArea.removeFromTop (controlHeight);
+            const int heatmapLabelWidth = juce::roundToInt (juce::jmax (95.0f, 110.0f * scale));
+            const int heatmapValueWidth = juce::roundToInt (juce::jmax (60.0f, 72.0f * scale));
+            const int heatmapSliderWidth = juce::jlimit (juce::roundToInt (140.0f * scale),
+                                                         juce::roundToInt (240.0f * scale),
+                                                         heatmapRow.getWidth());
+
+            auto valueArea = heatmapRow.removeFromRight (heatmapValueWidth);
+            heatmapDensityValueLabel.setBounds (valueArea.withHeight (controlHeight));
+
+            heatmapRow.removeFromRight (spacing);
+            auto sliderArea = heatmapRow.removeFromRight (heatmapSliderWidth);
+            heatmapDensitySlider.setBounds (sliderArea.withHeight (controlHeight));
+
+            heatmapRow.removeFromRight (spacing);
+            auto labelArea = heatmapRow.removeFromRight (heatmapLabelWidth);
+            heatmapDensityLabel.setBounds (labelArea.withHeight (controlHeight));
+
+            headerBottom = std::max (headerBottom, std::max (valueArea.getBottom(), std::max (sliderArea.getBottom(), labelArea.getBottom())));
+            addDivider (heatmapRow.getBottom());
+            headerArea.removeFromTop (spacing);
+        }
+        else
+        {
+            heatmapDensityLabel.setBounds ({});
+            heatmapDensitySlider.setBounds ({});
+            heatmapDensityValueLabel.setBounds ({});
+        }
     }
+
+    const int weightTitleHeight = juce::roundToInt (juce::jmax (18.0f, 22.0f * scale));
+    auto weightTitleRow = headerArea.removeFromTop (weightTitleHeight);
+    bandWeightTitleLabel.setBounds (weightTitleRow.withHeight (weightTitleHeight));
+    headerBottom = std::max (headerBottom, weightTitleRow.getBottom());
+    addDivider (weightTitleRow.getBottom());
+
+    headerArea.removeFromTop (juce::roundToInt (3.0f * scale));
+
+    juce::Rectangle<int> legendReference;
+
+    const int weightRowHeight = juce::roundToInt (juce::jmax ((float) controlHeight, 28.0f * scale));
+    auto weightRow = headerArea.removeFromTop (weightRowHeight);
+
+    auto weightArea = weightRow;
+    const int padButtonWidth = juce::roundToInt (juce::jmax (130.0f, 150.0f * scale));
+    auto buttonArea = weightArea.removeFromRight (padButtonWidth);
+    colourPadButton.setBounds (buttonArea.withSizeKeepingCentre (padButtonWidth, controlHeight));
+    weightArea.removeFromRight (juce::roundToInt (6.0f * scale));
+
+    auto sliderArea = weightArea;
+    legendReference = sliderArea;
+
+    auto columnSpacing = juce::roundToInt (6.0f * scale);
+    auto usableWidth = sliderArea.getWidth() - columnSpacing * 2;
+    auto columnWidth = juce::jmax (juce::roundToInt (180.0f * scale), usableWidth / 3);
+
+    auto layoutWeightColumn = [controlHeight] (juce::Rectangle<int> area, juce::Label& label, juce::Slider& slider)
+    {
+        const int labelWidth = juce::jmin (juce::roundToInt (70.0f), area.getWidth() / 3);
+        auto labelArea = area.removeFromLeft (labelWidth);
+        label.setBounds (labelArea.withHeight (controlHeight));
+        slider.setBounds (area.withHeight (controlHeight));
+    };
+
+    auto columnArea = sliderArea;
+    auto firstCol = columnArea.removeFromLeft (columnWidth);
+    layoutWeightColumn (firstCol, lowWeightLabel, lowWeightSlider);
+    columnArea.removeFromLeft (columnSpacing);
+    auto secondCol = columnArea.removeFromLeft (columnWidth);
+    layoutWeightColumn (secondCol, midWeightLabel, midWeightSlider);
+    columnArea.removeFromLeft (columnSpacing);
+    layoutWeightColumn (columnArea, highWeightLabel, highWeightSlider);
+
+    headerBottom = std::max (headerBottom, weightRow.getBottom());
+    addDivider (weightRow.getBottom());
+
+    headerArea.removeFromTop (spacing);
 
     auto outsideRowArea = headerArea.removeFromTop (controlHeight);
     layoutButtonRow (outsideRowArea, outsideButtonIndices, outsideLabel);
-    headerBottom = outsideRowArea.getBottom();
+    headerBottom = std::max (headerBottom, outsideRowArea.getBottom());
+    addDivider (outsideRowArea.getBottom());
 
     headerArea.removeFromTop (spacing);
 
     auto insideRowArea = headerArea.removeFromTop (controlHeight);
     layoutButtonRow (insideRowArea, insideButtonIndices, insideLabel);
-    headerBottom = insideRowArea.getBottom();
+    headerBottom = std::max (headerBottom, insideRowArea.getBottom());
+    addDivider (insideRowArea.getBottom());
 
+    headerArea.removeFromTop (spacing);
+
+    const int legendRowHeight = juce::roundToInt (juce::jmax ((float) controlHeight, 34.0f * scale));
+    auto legendRow = headerArea.removeFromTop (legendRowHeight);
+
+    if (legendReference.isEmpty())
+        legendReference = legendRow;
+
+    const int legendMinWidth = juce::roundToInt (juce::jmax (160.0f, 180.0f * scale));
+    const int legendMaxWidth = juce::roundToInt (juce::jmax (220.0f, 280.0f * scale));
+    const int legendWidth = juce::jlimit (legendMinWidth, legendMaxWidth, legendReference.getWidth());
+    const int legendRight = juce::jmin (legendReference.getRight(), legendRow.getRight());
+    const int legendLeft = juce::jmax (legendRow.getX(), legendRight - legendWidth);
+    juce::Rectangle<int> legendArea (legendLeft, legendRow.getY(), legendRight - legendLeft, legendRowHeight);
+    colourLegend.setBounds (legendArea.reduced (juce::roundToInt (4.0f * scale), juce::roundToInt (2.0f * scale)));
+    headerBottom = std::max (headerBottom, legendArea.getBottom());
+    addDivider (legendArea.getBottom());
+
+    headerArea.removeFromTop (spacing);
     const int textBoxWidth = juce::roundToInt (juce::jlimit (56.0f, 86.0f, 68.0f * scale));
     const int textBoxHeight = juce::roundToInt (juce::jlimit (18.0f, 24.0f, 20.0f * scale + 4.0f));
     zoomSlider.setTextBoxStyle (juce::Slider::TextBoxLeft, false, textBoxWidth, textBoxHeight);
@@ -1527,4 +2393,28 @@ void AtmosVizAudioProcessorEditor::resized()
                                .reduced (juce::roundToInt (16.0f * scale), juce::roundToInt (10.0f * scale));
     visualizer->setBounds (viewerBounds);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
