@@ -32,6 +32,7 @@ namespace
     constexpr float outsideProjectionScale = 0.45f;
     constexpr float insideNearPlane        = 0.05f;
     constexpr float insideDefaultZoom      = 0.25f;
+    constexpr float insideTopDefaultZoom   = 0.10f;
     constexpr float outsideDefaultZoom     = 1.0f;
 
     constexpr std::array<PresetDefinition, 12> presetDefinitions = { {
@@ -46,7 +47,7 @@ namespace
         { CameraPreset::InsideBack,   {   90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideLeft,   {    0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideRight,  {  180.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideTop,    {    0.0f,  -90.0f, insideTopBaseDistance,    true  } }
+        { CameraPreset::InsideTop,    {   90.0f,   90.0f, insideTopBaseDistance,    true  } }
     } };
 }
 
@@ -172,7 +173,7 @@ SpeakerVisualizerComponent::ProjectedPoint SpeakerVisualizerComponent::projectPo
     if (cameraInside)
     {
         const auto referenceDistance = juce::jmax (insideNearPlane * 4.0f, cameraBaseDistance);
-        const auto clampedDepth = juce::jmax (insideNearPlane, depth);
+        const auto clampedDepth = juce::jmax (insideNearPlane, std::abs (depth));
         perspectiveFactor = referenceDistance / clampedDepth;
     }
 
@@ -234,15 +235,17 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
     {
         g.setColour (juce::Colours::whitesmoke.withAlpha (0.9f));
 
-        auto clipToNearPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
+        const float clipDepth = -insideNearPlane;
+
+        auto clipToPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
         {
             const float denom = other.depth - point.depth;
             if (std::abs (denom) < 1.0e-6f)
                 return point;
 
-            const float t = (insideNearPlane - point.depth) / denom;
+            const float t = (clipDepth - point.depth) / denom;
             point.screen = point.screen + (other.screen - point.screen) * t;
-            point.depth = insideNearPlane;
+            point.depth = clipDepth;
             return point;
         };
 
@@ -251,14 +254,14 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
             auto start = roomVerticesProjected[(size_t) edge.first];
             auto end   = roomVerticesProjected[(size_t) edge.second];
 
-            if (start.depth <= insideNearPlane && end.depth <= insideNearPlane)
+            if (start.depth <= clipDepth && end.depth <= clipDepth)
                 continue;
 
-            if (start.depth <= insideNearPlane)
-                start = clipToNearPlane (start, end);
+            if (start.depth <= clipDepth)
+                start = clipToPlane (start, end);
 
-            if (end.depth <= insideNearPlane)
-                end = clipToNearPlane (end, start);
+            if (end.depth <= clipDepth)
+                end = clipToPlane (end, start);
 
             g.drawLine (juce::Line<float> (start.screen, end.screen), 3.0f);
         }
@@ -474,7 +477,9 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
         pitch        = juce::degreesToRadians (params->pitchDegrees);
         cameraBaseDistance = params->baseDistance;
 
-        const float targetZoom = cameraInside ? insideDefaultZoom : outsideDefaultZoom;
+        const float targetZoom = cameraInside
+                                ? (preset == CameraPreset::InsideTop ? insideTopDefaultZoom : insideDefaultZoom)
+                                : outsideDefaultZoom;
 
         if (cameraInside)
         {
@@ -649,7 +654,7 @@ void SpeakerVisualizerComponent::paint (juce::Graphics& g)
         const auto newEnd = std::remove_if (drawOrder.begin(), drawOrder.end(),
                                             [] (const DisplaySpeaker* speakerPtr)
                                             {
-                                                return speakerPtr->depth <= insideNearPlane;
+                                                return speakerPtr->depth < -insideNearPlane;
                                             });
         drawOrder.erase (newEnd, drawOrder.end());
     }
@@ -963,7 +968,7 @@ void SpeakerVisualizerComponent::drawRadiationHeatmap (juce::Graphics& g)
             continue;
 
         const auto projected = projectPoint (heatmapPoints[i]);
-        if (projected.depth <= insideNearPlane)
+        if (cameraInside && projected.depth < -insideNearPlane)
             continue;
 
         const auto normalised = juce::jlimit (0.0f, 1.0f, level / normaliser);
@@ -1090,7 +1095,7 @@ void SpeakerVisualizerComponent::updateTrails()
 {
     for (auto& speaker : speakers)
     {
-        if (cameraInside && speaker.depth <= insideNearPlane)
+        if (cameraInside && speaker.depth < -insideNearPlane)
         {
             if (! speaker.trail.empty())
                 speaker.trail.clear();
