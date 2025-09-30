@@ -38,3 +38,5 @@
   - Inside Homeの俯角を見直し (ピッチ -25°・ズーム18%) で前方をやや引いた角度から見下ろす視点に再調整。
 - ビルド手順: コード変更ごとに必ず  `pwsh -File . \\build_vst3.ps1 ` を実行して VST3 を生成すること。 
 - Inside Homeデフォルトズームを25%に設定し、ズーム初期位置を調整。
+## 2025-09-30 (Milestone)
+- コミット 72e2d39 を「Outside 完全・Inside は線と Home の向き以外OK」状態としてタグ milestone/outside-complete-inside-home に設定。
