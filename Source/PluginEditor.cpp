@@ -32,7 +32,7 @@ namespace
     constexpr float outsideProjectionScale = 0.45f;
     constexpr float insideNearPlane        = 0.05f;
     constexpr float insideDefaultZoom      = 0.25f;
-    constexpr float insideHomeDefaultZoom  = 0.18f;
+    constexpr float insideHomeDefaultZoom  = 0.25f;
     constexpr float insideTopDefaultZoom   = 0.10f;
     constexpr float outsideDefaultZoom     = 1.0f;
 
@@ -2469,6 +2469,7 @@ void AtmosVizAudioProcessorEditor::resized()
                                .reduced (juce::roundToInt (16.0f * scale), juce::roundToInt (10.0f * scale));
     visualizer->setBounds (viewerBounds);
 }
+
 
 
 
