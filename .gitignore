@@ -33,3 +33,23 @@ JuceLibraryCode/juce_audio_plugin_client_VST_pch.h
 Thumbs.db
 .vs/
 
+# Build outputs inside generated bundle directories
+Builds/**/VST3/
+Builds/**/Standalone Plugin/
+Builds/**/VST3 Manifest Helper/
+Builds/**/bin/
+Builds/**/obj/
+Builds/**/ipch/
+Builds/**/GeneratedFiles/
+Builds/**/*.tlog
+Builds/**/*.lastbuildstate
+Builds/**/*.log
+Builds/**/*.cache
+
+# Packaged plugin bundles copied back into the repo
+*.vst3
+*.dll
+*.pdb
+*.exp
+*.lib
+*.exe
