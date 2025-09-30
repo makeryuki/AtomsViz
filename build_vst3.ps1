@@ -42,7 +42,8 @@ $resourceDir = Join-Path $bundleRoot 'Contents/Resources'
 New-Item -ItemType Directory -Force -Path $binaryDir | Out-Null
 New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
 
-Copy-Item -Path $dllPath -Destination (Join-Path $binaryDir 'AtmosViz.dll') -Force
+Remove-Item (Join-Path $binaryDir 'AtmosViz.dll') -ErrorAction SilentlyContinue
+Copy-Item -Path $dllPath -Destination (Join-Path $binaryDir 'AtmosViz.vst3') -Force
 
 $moduleInfoSource = Get-ChildItem -Path $buildRoot -Filter 'moduleinfo.json' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($moduleInfoSource) {
