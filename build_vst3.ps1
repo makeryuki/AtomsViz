@@ -14,10 +14,11 @@ if (-not (Test-Path $solution)) {
 }
 
 if (-not $SkipBuild) {
+    $vsBase = Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio'
     $msbuildCandidates = @(
-        Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe',
-        Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/amd64/MSBuild.exe',
-        Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe'
+        Join-Path $vsBase '2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe',
+        Join-Path $vsBase '2022/Professional/MSBuild/Current/Bin/amd64/MSBuild.exe',
+        Join-Path $vsBase '2022/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe'
     )
 
     $msbuild = $msbuildCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
