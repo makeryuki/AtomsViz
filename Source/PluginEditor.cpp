@@ -24,7 +24,7 @@ namespace
     constexpr float outsideHomeBaseDistance  = 40.0f;
     constexpr float outsideOrbitBaseDistance = 25.0f;
     constexpr float outsideTopBaseDistance   = 32.0f;
-    constexpr float insideHomeBaseDistance   = 6.0f;
+    constexpr float insideHomeBaseDistance   = 7.0f;
     constexpr float insideOrbitBaseDistance  = 6.0f;
     constexpr float insideTopBaseDistance    = 8.0f;
 
@@ -32,6 +32,7 @@ namespace
     constexpr float outsideProjectionScale = 0.45f;
     constexpr float insideNearPlane        = 0.05f;
     constexpr float insideDefaultZoom      = 0.25f;
+    constexpr float insideHomeDefaultZoom  = 0.22f;
     constexpr float insideTopDefaultZoom   = 0.10f;
     constexpr float outsideDefaultZoom     = 1.0f;
 
@@ -42,12 +43,12 @@ namespace
         { CameraPreset::OutsideLeft,  {    0.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideRight, {  180.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideTop,   {  -90.0f, -90.0f, outsideTopBaseDistance,   false } },
-        { CameraPreset::InsideHome,   {  -90.0f, -12.0f, insideHomeBaseDistance,   true  } },
+        { CameraPreset::InsideHome,   {  -90.0f, -20.0f, insideHomeBaseDistance,   true  } },
         { CameraPreset::InsideFront,  {  -90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideBack,   {   90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideLeft,   {    0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideRight,  {  180.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideTop,    {   90.0f,   90.0f, insideTopBaseDistance,    true  } }
+        { CameraPreset::InsideTop,    {  -90.0f,  -90.0f, insideTopBaseDistance,    true  } }
     } };
 }
 
@@ -87,7 +88,7 @@ SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& 
         insideUserState.yaw          = juce::degreesToRadians (insideHome->yawDegrees);
         insideUserState.pitch        = juce::degreesToRadians (insideHome->pitchDegrees);
         insideUserState.baseDistance = insideHome->baseDistance;
-        insideUserState.zoom         = insideDefaultZoom;
+        insideUserState.zoom         = insideHomeDefaultZoom;
     }
 
     setCameraPreset (CameraPreset::OutsideHome);
@@ -477,9 +478,17 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
         pitch        = juce::degreesToRadians (params->pitchDegrees);
         cameraBaseDistance = params->baseDistance;
 
-        const float targetZoom = cameraInside
-                                ? (preset == CameraPreset::InsideTop ? insideTopDefaultZoom : insideDefaultZoom)
-                                : outsideDefaultZoom;
+        float targetZoom = outsideDefaultZoom;
+        if (cameraInside)
+        {
+            if (preset == CameraPreset::InsideTop)
+                targetZoom = insideTopDefaultZoom;
+            else if (preset == CameraPreset::InsideHome)
+                targetZoom = insideHomeDefaultZoom;
+            else
+                targetZoom = insideDefaultZoom;
+        }
+
 
         if (cameraInside)
         {
