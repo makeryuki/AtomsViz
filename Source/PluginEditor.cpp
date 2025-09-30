@@ -490,12 +490,7 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
         }
 
 
-        if (cameraInside)
-        {
-            setZoomFactor (targetZoom, true);
-            zoomHandled = true;
-        }
-        else if (isHomePreset (preset))
+        if (cameraInside || (! cameraInside && ! isUserPreset (preset)))
         {
             setZoomFactor (targetZoom, true);
             zoomHandled = true;
