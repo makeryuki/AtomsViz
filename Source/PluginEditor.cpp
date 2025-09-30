@@ -43,7 +43,7 @@ namespace
         { CameraPreset::OutsideLeft,  {    0.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideRight, {  180.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideTop,   {  -90.0f, -90.0f, outsideTopBaseDistance,   false } },
-        { CameraPreset::InsideHome,   {  -90.0f, -32.0f, insideHomeBaseDistance,   true  } },
+        { CameraPreset::InsideHome,   {  -90.0f,  32.0f, insideHomeBaseDistance,   true  } },
         { CameraPreset::InsideFront,  {  -90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideBack,   {   90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
         { CameraPreset::InsideLeft,   {    0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
