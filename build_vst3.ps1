@@ -14,11 +14,10 @@ if (-not (Test-Path $solution)) {
 }
 
 if (-not $SkipBuild) {
-    $vsBase = Join-Path ${env:ProgramFiles} 'Microsoft Visual Studio'
     $msbuildCandidates = @(
-        Join-Path $vsBase '2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe',
-        Join-Path $vsBase '2022/Professional/MSBuild/Current/Bin/amd64/MSBuild.exe',
-        Join-Path $vsBase '2022/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe'
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64\MSBuild.exe"
     )
 
     $msbuild = $msbuildCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -42,7 +41,7 @@ $resourceDir = Join-Path $bundleRoot 'Contents/Resources'
 New-Item -ItemType Directory -Force -Path $binaryDir | Out-Null
 New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
 
-Remove-Item (Join-Path $binaryDir 'AtmosViz.dll') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $binaryDir 'AtmosViz.vst3') -ErrorAction SilentlyContinue
 Copy-Item -Path $dllPath -Destination (Join-Path $binaryDir 'AtmosViz.vst3') -Force
 
 $moduleInfoSource = Get-ChildItem -Path $buildRoot -Filter 'moduleinfo.json' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
