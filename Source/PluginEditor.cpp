@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
@@ -29,8 +30,9 @@ namespace
     constexpr float insideTopBaseDistance    = 8.0f;
 
     constexpr float insideProjectionScale  = 0.35f;
+    constexpr float insidePerspectiveDistance = 6.5f;
     constexpr float outsideProjectionScale = 0.45f;
-    constexpr float insideNearPlane        = 0.05f;
+    constexpr float insideNearPlane        = 0.005f;
     constexpr float insideDefaultZoom      = 0.25f;
     constexpr float insideHomeDefaultZoom  = 0.25f;
     constexpr float insideTopDefaultZoom   = 0.10f;
@@ -173,9 +175,9 @@ SpeakerVisualizerComponent::ProjectedPoint SpeakerVisualizerComponent::projectPo
 
     if (cameraInside)
     {
-        const auto referenceDistance = juce::jmax (insideNearPlane * 4.0f, cameraBaseDistance);
-        const auto clampedDepth = juce::jmax (insideNearPlane, std::abs (depth));
-        perspectiveFactor = referenceDistance / clampedDepth;
+        const float focalDistance = juce::jmax (insidePerspectiveDistance, cameraBaseDistance);
+        const float clampedDepth = juce::jmax (insideNearPlane, std::abs (depth));
+        perspectiveFactor = focalDistance / clampedDepth;
     }
 
     return {
@@ -232,43 +234,6 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
 {
     updateRoomProjection();
 
-    if (cameraInside)
-    {
-        g.setColour (juce::Colours::whitesmoke.withAlpha (0.9f));
-
-        const float clipDepth = -insideNearPlane;
-
-        auto clipToPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
-        {
-            const float denom = other.depth - point.depth;
-            if (std::abs (denom) < 1.0e-6f)
-                return point;
-
-            const float t = (clipDepth - point.depth) / denom;
-            point.screen = point.screen + (other.screen - point.screen) * t;
-            point.depth = clipDepth;
-            return point;
-        };
-
-        for (const auto& edge : roomEdges)
-        {
-            auto start = roomVerticesProjected[(size_t) edge.first];
-            auto end   = roomVerticesProjected[(size_t) edge.second];
-
-            if (start.depth <= clipDepth && end.depth <= clipDepth)
-                continue;
-
-            if (start.depth <= clipDepth)
-                start = clipToPlane (start, end);
-
-            if (end.depth <= clipDepth)
-                end = clipToPlane (end, start);
-
-            g.drawLine (juce::Line<float> (start.screen, end.screen), 3.0f);
-        }
-        return;
-    }
-
     const auto cosYaw   = std::cos (yaw);
     const auto sinYaw   = std::sin (yaw);
     const auto cosPitch = std::cos (pitch);
@@ -300,6 +265,133 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
         juce::Vector3D<float> {  0.0f,  0.0f,  1.0f },
         juce::Vector3D<float> {  0.0f,  0.0f, -1.0f }
     };
+
+    if (cameraInside)
+    {
+        const float clipDepth = insideNearPlane;
+        const float floorY = -roomDimensions.earHeight;
+        const float ceilingY = roomDimensions.height - roomDimensions.earHeight;
+
+        auto clipToPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
+        {
+            const float denom = other.depth - point.depth;
+            if (std::abs (denom) < 1.0e-6f)
+                return point;
+
+            const float t = (clipDepth - point.depth) / denom;
+            point.screen = point.screen + (other.screen - point.screen) * t;
+            point.depth = clipDepth;
+            return point;
+        };
+
+        struct EdgeSegment
+        {
+            juce::Point<float> start;
+            juce::Point<float> end;
+            float depth = 0.0f;
+            bool isFloor = false;
+            bool isCeiling = false;
+            bool isVertical = false;
+            float facing = 0.0f;
+        };
+
+        std::vector<EdgeSegment> segments;
+        segments.reserve (roomEdges.size());
+
+        float nearestDepth = std::numeric_limits<float>::max();
+        float farthestDepth = std::numeric_limits<float>::lowest();
+
+        const juce::Vector3D<float> cameraForward (-sinYaw * cosPitch,
+                                                   -sinPitch,
+                                                   -cosYaw * cosPitch);
+
+        for (size_t edgeIndex = 0; edgeIndex < roomEdges.size(); ++edgeIndex)
+        {
+            const auto& edge = roomEdges[edgeIndex];
+            auto start = roomVerticesProjected[(size_t) edge.first];
+            auto end   = roomVerticesProjected[(size_t) edge.second];
+
+            if (start.depth < clipDepth && end.depth < clipDepth)
+                continue;
+
+            if (start.depth < clipDepth)
+                start = clipToPlane (start, end);
+
+            if (end.depth < clipDepth)
+                end = clipToPlane (end, start);
+
+            const auto& modelStart = roomVerticesModel[(size_t) edge.first];
+            const auto& modelEnd   = roomVerticesModel[(size_t) edge.second];
+
+            const bool sameY = std::abs (modelStart.y - modelEnd.y) < 1.0e-4f;
+            const bool isFloor = sameY && std::abs (modelStart.y - floorY) < 1.0e-3f;
+            const bool isCeiling = sameY && std::abs (modelStart.y - ceilingY) < 1.0e-3f;
+            const bool isVertical = ! sameY;
+
+            const float averageDepth = (start.depth + end.depth) * 0.5f;
+            nearestDepth = std::min (nearestDepth, averageDepth);
+            farthestDepth = std::max (farthestDepth, averageDepth);
+
+            const auto faces = edgeFaceLookup[edgeIndex];
+            float facingAmount = 0.0f;
+            for (int i = 0; i < 2; ++i)
+            {
+                const auto normal = faceNormals[(size_t) faces[i]];
+                facingAmount = std::max (facingAmount, cameraForward.dot (normal));
+            }
+            facingAmount = juce::jlimit (-1.0f, 1.0f, facingAmount);
+
+            segments.push_back ({
+                start.screen,
+                end.screen,
+                averageDepth,
+                isFloor,
+                isCeiling,
+                isVertical,
+                facingAmount
+            });
+        }
+
+        if (segments.empty())
+            return;
+
+        nearestDepth = std::max (clipDepth, nearestDepth);
+        const float depthRange = std::max (0.001f, farthestDepth - nearestDepth);
+
+        std::sort (segments.begin(), segments.end(),
+                   [] (const EdgeSegment& lhs, const EdgeSegment& rhs)
+                   {
+                       return lhs.depth > rhs.depth;
+                   });
+
+        for (const auto& segment : segments)
+        {
+            const float depthFactor = juce::jlimit (0.0f, 1.0f,
+                                                    (segment.depth - nearestDepth) / depthRange);
+            const float distanceWeight = 1.0f - depthFactor;
+            const float facingWeight = juce::jlimit (0.0f, 1.0f, (segment.facing + 1.0f) * 0.5f);
+
+            juce::Colour baseColour = juce::Colours::whitesmoke;
+
+            if (segment.isFloor)
+                baseColour = juce::Colour::fromRGB (118, 150, 192);
+            else if (segment.isCeiling)
+                baseColour = juce::Colour::fromRGB (205, 210, 220);
+            else if (segment.isVertical)
+                baseColour = juce::Colour::fromRGB (188, 198, 210);
+
+            const float alpha = juce::jlimit (0.28f, 0.85f,
+                                              0.28f + 0.5f * distanceWeight + 0.18f * facingWeight);
+            const float width = juce::jmap (distanceWeight, 0.0f, 1.0f, 1.6f, 3.0f);
+
+            g.setColour (baseColour.withAlpha (alpha));
+            g.drawLine (juce::Line<float> (segment.start, segment.end), width);
+        }
+
+        return;
+    }
+
+
 
     std::array<bool, 6> faceVisible {};
     for (size_t face = 0; face < faceVisible.size(); ++face)
@@ -343,6 +435,7 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
     for (const auto& edge : visibleEdges)
         g.drawLine (juce::Line<float> (edge.start, edge.end), 3.0f);
 }
+
 
 void SpeakerVisualizerComponent::drawGizmo (juce::Graphics& g)
 {
@@ -2464,29 +2557,3 @@ void AtmosVizAudioProcessorEditor::resized()
                                .reduced (juce::roundToInt (16.0f * scale), juce::roundToInt (10.0f * scale));
     visualizer->setBounds (viewerBounds);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
