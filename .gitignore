@@ -53,3 +53,9 @@ Builds/**/*.cache
 *.exp
 *.lib
 *.exe
+
+# Local reference captures and scratch files
+1/
+/*.png
+projectPoint_current.txt
+

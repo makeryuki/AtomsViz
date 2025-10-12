@@ -1,35 +1,79 @@
-# ユーザーズマニュアル (AtmosViz)
+# AtmosViz User Manual
 
-## 1. セットアップ
-1. Visual Studio 2022 でソリューションを開き、`Build > Clean Solution` → `Build Solution` を実行。
-2. 生成された `Builds/VisualStudio2022/x64/Debug/VST3/AtmosViz.vst3/Contents/x86_64-win/AtmosViz.vst3` を `%COMMONPROGRAMFILES%\VST3` にコピー。
-3. DAW (VST3 対応) を再スキャンして AtmosViz を挿入。
+**Limitation:** AtmosViz currently supports only 7.1.4 channel layouts. Other bus configurations are not yet supported.
 
-## 2. メイン操作
-- **カメラプリセットパネル**
-  - User スロットは Outside/Inside で独立して保持される。
-  - 上段: ラベル `Outside` の右に `[Home][User][Front][Back][Left][Right][Top]` を水平配置。Home は部屋全体が確実に収まる固定距離の遠距離俯瞰、User は室外用カスタム視点（初期値: フロントを含む斜め俯瞰ビュー）を一時保存/呼び戻し、Front/Back/Left/Right は各面の外側から法線方向を向いて箱状レイアウトを表示し、Top は天井の外側から真下を向いて天井面とトップスピーカーを俯瞰する。
-  - 下段: ラベル `Inside` の右に同じ `[Home][User][Front][Back][Left][Right][Top]` を配置。Home はリスニングポジション正面を向く室内ホームビュー（カメラ位置は常に原点＝リスニング位置）、User は原点固定のまま調整した yaw/pitch/ズームを保持する室内容カスタム視点（初期値: フロントを含む斜め俯瞰ビュー）を一時保存/呼び戻し、Front/Back/Left/Right は向きをそれぞれ +Z/-Z/-X/+X に切り替え、Top は原点で真上（+Y）を向いて天井面とトップスピーカーを俯瞰する。
-- **ズームスライダー / マウスホイール**
-  - ラベル: `Zoom (10%–200%)`。既定値は 100%（Home と同じ視点）。
-  - Outside: Home 基準距離（約 40 m）を 100% とし、倍率に応じて距離を算出（倍率が大きいほど近づき、小さいほど遠ざかる）。
-  - Inside: Home 基準視野を 100% とし、原点固定のまま FOV 相当を倍率で調整（倍率が大きいほど近づく）。
-## 3. 表示要素
-- スピーカー球と指向性ローブ (RMS・帯域比率に応じた色/サイズ)。
-- LFE は球のみ表示。
-- ルームワイヤーフレーム: Inside=実線、Outside=前面実線・背面破線。
-- XYZ ギズモで空間方向を明示。
+## 1. Installation
+1. Download the Release zip (`dist/AtmosViz_v0.3.0_Windows_VST3.zip`) from the repository or GitHub Release page.
+2. Extract the archive; you will get `AtmosViz.vst3` (a folder bundle).
+3. Copy the entire bundle into `C:\Program Files\Common Files\VST3`.
+4. Launch your DAW and rescan plug-ins. AtmosViz appears under *Effects*.
+5. For the standalone tool, run `Builds/VisualStudio2022/x64/Release/Standalone Plugin/AtmosViz.exe`.
 
-## 4. 推奨ワークフロー
-1. Home で初期状態を確認。
-2. Inside で局所的な音量・指向性を観察。
-3. Outside でズームを 0.01 以下に下げ、全体のバランスと干渉を俯瞰。
-4. Front/Back/Left/Right で個別スピーカーのローブを比較。
+## 2. Quick Start
+1. Open AtmosViz on an Atmos-capable session.
+2. Choose a **View Mode** from the drop-down:
+   - *Radiation Heatmap*
+   - *Temporal Trails*
+   - *Peak Hold*
+3. Pick a **Perspective** (Inside or Outside) and a camera preset button (Home, Front, Back, Left, Right, Top, User).
+4. Use the **Zoom slider** (10%-200%). Inside presets honour minimum zooms (40% or 25%).
+5. Adjust **Heatmap Density** (if visible) to refine spatial sampling.
+6. Tweak **Band Colour Weights** or open the **Colour Mix Pad** to rebalance low/mid/high emphasis.
 
-## 5. トラブルシューティング
-- プラグインが表示されない場合は VST3 の配置と DAW の再スキャンを確認。
-- 視点が迷子になったら Home を押してリセット。
-- ズームが効かない場合はスライダー値が範囲内か、マウスホイールが DAW 側に奪われていないかを確認。
+## 3. Controls Reference
+| Control | Location | Description |
+|---------|----------|-------------|
+| View Mode combo | Header, left | Switches between visualisation algorithms. Heatmap reveals density slider and heatmap legend. |
+| Slider Mode combo | Header | Chooses whether the horizontal slider controls Zoom or Draw Scale. |
+| Zoom/Draw Scale slider | Header | Zoom: 10-200%. Draw Scale: scales speaker glyph size without moving the camera. |
+| Heatmap Density slider | Header (Heatmap only) | Levels 1-5 labelled Coarse, Low, Medium, High, Ultra. Updates sampling grid and legend caption. |
+| Band Colour sliders | Header | Three linear sliders (Low, Mid, High) that weight colour contribution. |
+| Colour Mix Pad button | Header | Opens triangular pad; dragging any node rewrites band weights. |
+| Colour Legend | Header, right | Shows gradient for current mode. For Heatmap: Low/Mid/High labels with colour ramp. |
+| Camera preset buttons | Left of content | Instant view changes for Inside/Outside sets. User stores last manual orientation. |
+| Reset button | Context menu | Right-click the visualiser to reset to User defaults. |
 
-## 6. 今後の予定
-- 設定の保存/読込機能、配色テーマ切り替え、ローブ形状のカスタマイズなどを検討中。
+## 4. Camera Behaviour
+- **Inside Home/User**: Camera fixed at room origin. Defaults yaw -95 deg, pitch -5 deg, zoom 60%. Wheel clamps to >=40%.
+- **Inside Top**: Camera looks downward from origin. Default zoom 25%, min 25%.
+- **Outside**: Orthographic orbit around the room bounding box; zoom independent of inside constraints.
+
+## 5. Colour Mixing
+- Colours derive from normalised band energy (Low, Mid, High) scaled by user-defined weights.
+- Default weights favour balanced palette (Low=0.33, Mid=0.33, High=0.34).
+- Colour Mix Pad anchors corners to pure Blue (Low), Green (Mid), Red (High). Interior mixes yield intermediary hues.
+
+## 6. Heatmap Interpretation
+- Heatmap intensity values are normalised to the peak of the current frame with smoothing to avoid flicker.
+- Density level sets grid resolution (Depth x Width x Height):
+  - 1: 5x5x3
+  - 2: 7x7x5
+  - 3: 9x9x7
+  - 4: 11x11x9
+  - 5: 13x13x11
+- Legend labels map energy to colour gradient; low energy stays blue, mid energy green, high energy orange/red.
+
+## 7. Troubleshooting
+| Symptom | Remedy |
+|---------|--------|
+| Plug-in missing in DAW | Confirm the bundle sits in `\VST3\` and re-scan. If still missing, copy `AtmosViz.vst3` while DAW is closed. |
+| Camera jumps unexpectedly | Check Slider Mode (Zoom vs Draw Scale). Reset by right-clicking the visualiser. |
+| Colour Mix Pad does not open | Ensure the editor window has focus; the pad opens as a floating call-out anchored to the button. |
+| Heatmap slider hidden | Only visible while *Radiation Heatmap* view mode is active. |
+| Outside view distorted | Verify you are on the latest commit (`master`) and the preset buttons show "Outside" group. |
+
+## 8. Support Channels
+- File GitHub Issues with description, host, sample rate, and screenshot (use `1/` folder templates).
+
+## 9. Future Roadmap (snapshot)
+- Revisit Inside Top orientation (front wall alignment).
+- Automate visual regression via scripted camera sweeps.
+- Add optional 3D asset overlay for room treatment cues.
+
+
+
+
+
+
+
+
