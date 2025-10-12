@@ -29,28 +29,29 @@ namespace
     constexpr float insideOrbitBaseDistance  = 6.0f;
     constexpr float insideTopBaseDistance    = 8.0f;
 
-    constexpr float insideProjectionScale  = 0.35f;
-    constexpr float insidePerspectiveDistance = 6.5f;
+    constexpr float insideHorizontalFovDegrees = 100.0f;
     constexpr float outsideProjectionScale = 0.45f;
-    constexpr float insideNearPlane        = 0.005f;
-    constexpr float insideDefaultZoom      = 0.25f;
-    constexpr float insideHomeDefaultZoom  = 0.25f;
-    constexpr float insideTopDefaultZoom   = 0.10f;
+    constexpr float insideNearPlane        = 0.2f;
+    constexpr float insideDefaultZoom      = 0.60f;
+    constexpr float insideHomeDefaultZoom  = 0.60f;
+    constexpr float insideTopDefaultZoom   = 0.25f;
+    constexpr float insideDefaultMinZoom   = 0.40f;
+    constexpr float insideTopMinZoom       = 0.25f;
     constexpr float outsideDefaultZoom     = 1.0f;
 
     constexpr std::array<PresetDefinition, 12> presetDefinitions = { {
-        { CameraPreset::OutsideHome,  { -110.0f, -18.0f, outsideHomeBaseDistance,  false } },
-        { CameraPreset::OutsideFront, {  -90.0f,   0.0f, outsideOrbitBaseDistance, false } },
-        { CameraPreset::OutsideBack,  {   90.0f,   0.0f, outsideOrbitBaseDistance, false } },
-        { CameraPreset::OutsideLeft,  {    0.0f,   0.0f, outsideOrbitBaseDistance, false } },
-        { CameraPreset::OutsideRight, {  180.0f,   0.0f, outsideOrbitBaseDistance, false } },
-        { CameraPreset::OutsideTop,   {  -90.0f, -90.0f, outsideTopBaseDistance,   false } },
-        { CameraPreset::InsideHome,   {  -90.0f, -25.0f, insideHomeBaseDistance,   true  } },
-        { CameraPreset::InsideFront,  {  -90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideBack,   {   90.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideLeft,   {    0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideRight,  {  180.0f,   0.0f, insideOrbitBaseDistance,  true  } },
-        { CameraPreset::InsideTop,    {  -90.0f,  -90.0f, insideTopBaseDistance,    true  } }
+        { CameraPreset::OutsideHome,  { -110.0f, -18.0f,   0.0f, outsideHomeBaseDistance,  false } },
+        { CameraPreset::OutsideFront, {  -90.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
+        { CameraPreset::OutsideBack,  {   90.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
+        { CameraPreset::OutsideLeft,  {    0.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
+        { CameraPreset::OutsideRight, {  180.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
+        { CameraPreset::OutsideTop,   {  -90.0f, -90.0f,   0.0f, outsideTopBaseDistance,   false } },
+        { CameraPreset::InsideHome,   {  -95.0f,  -5.0f,   0.0f, insideHomeBaseDistance,   true  } },
+        { CameraPreset::InsideFront,  {  -90.0f,   0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
+        { CameraPreset::InsideBack,   {   90.0f,   0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
+        { CameraPreset::InsideLeft,   {    0.0f,   0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
+        { CameraPreset::InsideRight,  {  180.0f,   0.0f,   0.0f, insideOrbitBaseDistance,  true  } },
+        { CameraPreset::InsideTop,    {    0.0f, -90.0f, -90.0f, insideTopBaseDistance,    true  } }
     } };
 }
 
@@ -81,6 +82,7 @@ SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& 
     {
         outsideUserState.yaw          = juce::degreesToRadians (outsideHome->yawDegrees);
         outsideUserState.pitch        = juce::degreesToRadians (outsideHome->pitchDegrees);
+        outsideUserState.roll         = juce::degreesToRadians (outsideHome->rollDegrees);
         outsideUserState.baseDistance = outsideHome->baseDistance;
         outsideUserState.zoom         = outsideDefaultZoom;
     }
@@ -89,6 +91,7 @@ SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& 
     {
         insideUserState.yaw          = juce::degreesToRadians (insideHome->yawDegrees);
         insideUserState.pitch        = juce::degreesToRadians (insideHome->pitchDegrees);
+        insideUserState.roll         = juce::degreesToRadians (insideHome->rollDegrees);
         insideUserState.baseDistance = insideHome->baseDistance;
         insideUserState.zoom         = insideHomeDefaultZoom;
     }
@@ -122,8 +125,8 @@ void SpeakerVisualizerComponent::updateProjectionScale()
 
     if (cameraInside)
     {
-        baseProjectionScale = minDimension * insideProjectionScale;
-        projectionScale = baseProjectionScale * zoomFactor;
+        baseProjectionScale = 1.0f;
+        projectionScale = juce::jlimit (minZoomFactor, maxZoomFactor, zoomFactor);
         return;
     }
 
@@ -155,36 +158,143 @@ void SpeakerVisualizerComponent::updateProjectionScale()
 
 SpeakerVisualizerComponent::ProjectedPoint SpeakerVisualizerComponent::projectPoint (const juce::Vector3D<float>& point) const
 {
+    const auto bounds = getLocalBounds().toFloat();
+    const auto centre = bounds.getCentre();
+
+    if (cameraInside)
+    {
+        const auto params = computeInsideProjectionParameters (bounds);
+
+        const juce::Vector3D<float> relative { point.x - params.cameraPosition.x,
+                                                  point.y - params.cameraPosition.y,
+                                                  point.z - params.cameraPosition.z };
+
+        const float camX = params.row0.x * relative.x + params.row0.y * relative.y + params.row0.z * relative.z;
+        const float camY = params.row1.x * relative.x + params.row1.y * relative.y + params.row1.z * relative.z;
+        const float camZ = params.row2.x * relative.x + params.row2.y * relative.y + params.row2.z * relative.z;
+
+        const float depth = std::max (params.nearPlane, -camZ);
+
+        return {
+            { params.centre.x + (camX * params.focalX) / depth,
+              params.centre.y - (camY * params.focalY) / depth },
+            depth
+        };
+    }
+
     const auto cosYaw   = std::cos (yaw);
     const auto sinYaw   = std::sin (yaw);
     const auto cosPitch = std::cos (pitch);
     const auto sinPitch = std::sin (pitch);
 
-    const auto bounds = getLocalBounds().toFloat();
-    const auto centre = bounds.getCentre();
-    const auto scale = projectionScale;
+    const float x1 = point.x * cosYaw - point.z * sinYaw;
+    const float z1 = point.x * sinYaw + point.z * cosYaw;
+    const float y2 = point.y * cosPitch - z1 * sinPitch;
+    const float z2 = point.y * sinPitch + z1 * cosPitch;
 
-    const auto x1 = point.x * cosYaw - point.z * sinYaw;
-    const auto z1 = point.x * sinYaw + point.z * cosYaw;
-    const auto y2 = point.y * cosPitch - z1 * sinPitch;
-    const auto z2 = point.y * sinPitch + z1 * cosPitch;
-
-    const auto depth  = cameraInside ? -z2 : cameraDistance - z2;
-
-    float perspectiveFactor = 1.0f;
-
-    if (cameraInside)
-    {
-        const float focalDistance = juce::jmax (insidePerspectiveDistance, cameraBaseDistance);
-        const float clampedDepth = juce::jmax (insideNearPlane, std::abs (depth));
-        perspectiveFactor = focalDistance / clampedDepth;
-    }
+    const float depth  = cameraDistance - z2;
+    const float perspectiveFactor = 1.0f;
+    const float scale = projectionScale;
 
     return {
         { centre.x + x1 * scale * perspectiveFactor,
           centre.y - y2 * scale * perspectiveFactor },
         depth
     };
+}
+
+float SpeakerVisualizerComponent::getInsideMinZoomForPreset (CameraPreset preset) const noexcept
+{
+    return preset == CameraPreset::InsideTop ? insideTopMinZoom : insideDefaultMinZoom;
+}
+
+float SpeakerVisualizerComponent::getCurrentMinZoom() const noexcept
+{
+    if (! cameraInside)
+        return minZoomFactor;
+
+    const auto preset = isInsidePreset (currentPreset) ? currentPreset : CameraPreset::InsideUser;
+    return getInsideMinZoomForPreset (preset);
+}
+
+SpeakerVisualizerComponent::InsideProjectionParameters SpeakerVisualizerComponent::computeInsideProjectionParameters (juce::Rectangle<float> bounds) const
+{
+    InsideProjectionParameters params;
+
+    params.bounds = bounds;
+    params.centre = bounds.getCentre();
+    params.widthPx = std::max (1.0f, bounds.getWidth());
+    params.heightPx = std::max (1.0f, bounds.getHeight());
+    params.aspect = params.widthPx / std::max (params.heightPx, 1.0f);
+    const auto activePreset = isInsidePreset (currentPreset) ? currentPreset : CameraPreset::InsideUser;
+    const auto minZoom = getInsideMinZoomForPreset (activePreset);
+    params.zoom = juce::jlimit (minZoom, maxZoomFactor, zoomFactor);
+
+    const float horizontalFov = juce::degreesToRadians (insideHorizontalFovDegrees);
+    const float tanHalfHorizontal = std::tan (horizontalFov * 0.5f);
+    const float effectiveTanHalfHorizontal = tanHalfHorizontal / std::max (params.zoom, 1.0e-3f);
+    const float effectiveTanHalfVertical  = effectiveTanHalfHorizontal / std::max (params.aspect, 1.0e-3f);
+
+    params.focalX = (params.widthPx * 0.5f) / std::max (effectiveTanHalfHorizontal, 1.0e-3f);
+    params.focalY = (params.heightPx * 0.5f) / std::max (effectiveTanHalfVertical,  1.0e-3f);
+
+    params.nearPlane = insideNearPlane;
+    const float depth = roomDimensions.depth;
+    const float width = roomDimensions.width;
+    const float height = roomDimensions.height;
+    params.farPlane = std::sqrt (depth * depth + width * width + height * height);
+    params.cosYaw   = std::cos (yaw);
+    params.sinYaw   = std::sin (yaw);
+    params.cosPitch = std::cos (pitch);
+    params.sinPitch = std::sin (pitch);
+    params.cosRoll  = std::cos (roll);
+    params.sinRoll  = std::sin (roll);
+
+    const float cy = params.cosYaw;
+    const float sy = params.sinYaw;
+    const float cp = params.cosPitch;
+    const float sp = params.sinPitch;
+    const float cr = params.cosRoll;
+    const float sr = params.sinRoll;
+
+    const float Ry[3][3] = { { cy, 0.0f, -sy },
+                             { 0.0f, 1.0f, 0.0f },
+                             { sy, 0.0f,  cy } };
+
+    const float Rx[3][3] = { { 1.0f, 0.0f, 0.0f },
+                             { 0.0f,  cp, -sp },
+                             { 0.0f,  sp,  cp } };
+
+    const float Rz[3][3] = { {  cr, -sr, 0.0f },
+                             {  sr,  cr, 0.0f },
+                             { 0.0f, 0.0f, 1.0f } };
+
+    auto multiply = [] (const float a[3][3], const float b[3][3], float result[3][3])
+    {
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+            {
+                float value = 0.0f;
+                for (int k = 0; k < 3; ++k)
+                    value += a[i][k] * b[k][j];
+                result[i][j] = value;
+            }
+    };
+
+    float temp[3][3];
+    multiply (Rx, Ry, temp);
+
+    float R[3][3];
+    multiply (Rz, temp, R);
+
+    params.row0 = { R[0][0], R[0][1], R[0][2] };
+    params.row1 = { R[1][0], R[1][1], R[1][2] };
+    params.row2 = { R[2][0], R[2][1], R[2][2] };
+
+    params.cameraPosition = { 0.0f, 0.0f, 0.0f };
+    params.cameraForward = juce::Vector3D<float> { -R[2][0], -R[2][1], -R[2][2] }.normalised();
+
+    return params;
 }
 
 void SpeakerVisualizerComponent::updateProjections()
@@ -215,13 +325,25 @@ void SpeakerVisualizerComponent::applyOrbit (DisplaySpeaker& speaker) const
     const auto sinYaw   = std::sin (yaw);
     const auto cosPitch = std::cos (pitch);
     const auto sinPitch = std::sin (pitch);
+    const auto cosRoll  = std::cos (roll);
+    const auto sinRoll  = std::sin (roll);
 
-    const auto aimX1 = aim.x * cosYaw - aim.z * sinYaw;
-    const auto aimZ1 = aim.x * sinYaw + aim.z * cosYaw;
-    const auto aimY2 = aim.y * cosPitch - aimZ1 * sinPitch;
-    juce::ignoreUnused (aimZ1);
+    const float aimX1 = aim.x * cosYaw - aim.z * sinYaw;
+    const float aimZ1 = aim.x * sinYaw + aim.z * cosYaw;
+    const float aimY1 = aim.y;
 
-    auto dir2D = juce::Point<float> (aimX1, -aimY2);
+    float aimX2 = aimX1;
+    float aimY2 = aimY1 * cosPitch - aimZ1 * sinPitch;
+
+    if (cameraInside)
+    {
+        const float xRolled = aimX2 * cosRoll - aimY2 * sinRoll;
+        const float yRolled = aimX2 * sinRoll + aimY2 * cosRoll;
+        aimX2 = xRolled;
+        aimY2 = yRolled;
+    }
+
+    auto dir2D = juce::Point<float> (aimX2, -aimY2);
     const auto len = dir2D.getDistanceFromOrigin();
 
     if (len > 1.0e-4f) dir2D /= len;
@@ -268,124 +390,164 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
 
     if (cameraInside)
     {
-        const float clipDepth = insideNearPlane;
-        const float floorY = -roomDimensions.earHeight;
-        const float ceilingY = roomDimensions.height - roomDimensions.earHeight;
+        const auto bounds = getLocalBounds().toFloat();
+        const auto params = computeInsideProjectionParameters (bounds);
 
-        auto clipToPlane = [&] (ProjectedPoint point, const ProjectedPoint& other) -> ProjectedPoint
+        const float floorY   = -roomDimensions.earHeight;
+        const float ceilingY =  roomDimensions.height - roomDimensions.earHeight;
+        const float farPlane = std::max (params.farPlane, params.nearPlane + 1.0f);
+
+        const auto approxEqual = [] (float lhs, float rhs, float tolerance = 1.0e-3f)
         {
-            const float denom = other.depth - point.depth;
-            if (std::abs (denom) < 1.0e-6f)
-                return point;
-
-            const float t = (clipDepth - point.depth) / denom;
-            point.screen = point.screen + (other.screen - point.screen) * t;
-            point.depth = clipDepth;
-            return point;
+            return std::abs (lhs - rhs) <= tolerance;
         };
 
-        struct EdgeSegment
+        const auto toCamera = [&] (const juce::Vector3D<float>& world) -> juce::Vector3D<float>
         {
-            juce::Point<float> start;
-            juce::Point<float> end;
-            float depth = 0.0f;
-            bool isFloor = false;
-            bool isCeiling = false;
-            bool isVertical = false;
-            float facing = 0.0f;
+            const auto relative = world - params.cameraPosition;
+            const float camX = params.row0.x * relative.x + params.row0.y * relative.y + params.row0.z * relative.z;
+            const float camY = params.row1.x * relative.x + params.row1.y * relative.y + params.row1.z * relative.z;
+            const float camZ = params.row2.x * relative.x + params.row2.y * relative.y + params.row2.z * relative.z;
+            return { camX, camY, camZ };
         };
 
-        std::vector<EdgeSegment> segments;
-        segments.reserve (roomEdges.size());
+        auto clipToNear = [&] (juce::Vector3D<float>& a, juce::Vector3D<float>& b) -> bool
+        {
+            const float d0 = (-a.z) - params.nearPlane;
+            const float d1 = (-b.z) - params.nearPlane;
 
-        float nearestDepth = std::numeric_limits<float>::max();
-        float farthestDepth = std::numeric_limits<float>::lowest();
+            if (d0 < 0.0f && d1 < 0.0f)
+                return false;
 
-        const juce::Vector3D<float> cameraForward (-sinYaw * cosPitch,
-                                                   -sinPitch,
-                                                   -cosYaw * cosPitch);
+            if (d0 < 0.0f || d1 < 0.0f)
+            {
+                const float t = d0 / (d0 - d1);
+                const auto intersection = a + (b - a) * t;
+                if (d0 < 0.0f) a = intersection;
+                else           b = intersection;
+            }
+
+            return true;
+        };
+
+        const auto projectToScreen = [&] (const juce::Vector3D<float>& camera) -> juce::Point<float>
+        {
+            const float depth = std::max (params.nearPlane, -camera.z);
+            const float x = params.centre.x + (camera.x * params.focalX) / depth;
+            const float y = params.centre.y - (camera.y * params.focalY) / depth;
+            return { x, y };
+        };
+
+        const auto extendRayToBounds = [&] (juce::Point<float>& start, juce::Point<float>& end)
+        {
+            auto direction = end - start;
+            const float dirEps = 1.0e-4f;
+
+            auto consider = [&] (float t, juce::Point<float>& bestPoint, float& bestT)
+            {
+                if (t <= 1.0f + 1.0e-3f)
+                    return;
+
+                juce::Point<float> candidate = start + direction * t;
+
+                if (! std::isfinite (candidate.x) || ! std::isfinite (candidate.y))
+                    return;
+
+                if (candidate.x < bounds.getX() - 2.0f || candidate.x > bounds.getRight() + 2.0f)
+                    return;
+
+                if (candidate.y < bounds.getY() - 2.0f || candidate.y > bounds.getBottom() + 2.0f)
+                    return;
+
+                if (t < bestT)
+                {
+                    bestT = t;
+                    bestPoint = candidate;
+                }
+            };
+
+            float bestT = std::numeric_limits<float>::infinity();
+            juce::Point<float> bestPoint;
+
+            if (std::abs (direction.x) > dirEps)
+            {
+                consider ((bounds.getRight() - start.x) / direction.x, bestPoint, bestT);
+                consider ((bounds.getX()     - start.x) / direction.x, bestPoint, bestT);
+            }
+
+            if (std::abs (direction.y) > dirEps)
+            {
+                consider ((bounds.getBottom() - start.y) / direction.y, bestPoint, bestT);
+                consider ((bounds.getY()      - start.y) / direction.y, bestPoint, bestT);
+            }
+
+            if (std::isfinite (bestT))
+                end = bestPoint;
+        };
+
+        int facingFaceIndex = 0;
+        float bestFacingDot = -std::numeric_limits<float>::infinity();
+        for (int face = 0; face < (int) faceNormals.size(); ++face)
+        {
+            const auto& normal = faceNormals[(size_t) face];
+            const float dot = params.cameraForward.x * normal.x
+                            + params.cameraForward.y * normal.y
+                            + params.cameraForward.z * normal.z;
+
+            if (dot > bestFacingDot)
+            {
+                bestFacingDot = dot;
+                facingFaceIndex = face;
+            }
+        }
+
+        const bool hasFacingFace = bestFacingDot > 1.0e-4f;
 
         for (size_t edgeIndex = 0; edgeIndex < roomEdges.size(); ++edgeIndex)
         {
             const auto& edge = roomEdges[edgeIndex];
-            auto start = roomVerticesProjected[(size_t) edge.first];
-            auto end   = roomVerticesProjected[(size_t) edge.second];
+            const auto& v0World = roomVerticesModel[(size_t) edge.first];
+            const auto& v1World = roomVerticesModel[(size_t) edge.second];
 
-            if (start.depth < clipDepth && end.depth < clipDepth)
+            auto a = toCamera (v0World);
+            auto b = toCamera (v1World);
+
+            if (! clipToNear (a, b))
                 continue;
 
-            if (start.depth < clipDepth)
-                start = clipToPlane (start, end);
+            const auto faces = edgeFaceLookup[edgeIndex];
+            const bool belongsToFacingFace = hasFacingFace && ((faces[0] == facingFaceIndex) || (faces[1] == facingFaceIndex));
 
-            if (end.depth < clipDepth)
-                end = clipToPlane (end, start);
+            if (! belongsToFacingFace)
+            {
+                if ((-a.z) < (-b.z))
+                    std::swap (a, b);
+            }
 
-            const auto& modelStart = roomVerticesModel[(size_t) edge.first];
-            const auto& modelEnd   = roomVerticesModel[(size_t) edge.second];
+            auto p0 = projectToScreen (a);
+            auto p1 = projectToScreen (b);
 
-            const bool sameY = std::abs (modelStart.y - modelEnd.y) < 1.0e-4f;
-            const bool isFloor = sameY && std::abs (modelStart.y - floorY) < 1.0e-3f;
-            const bool isCeiling = sameY && std::abs (modelStart.y - ceilingY) < 1.0e-3f;
+            if (! belongsToFacingFace)
+                extendRayToBounds (p0, p1);
+
+            const bool sameY = std::abs (v0World.y - v1World.y) < 1.0e-4f;
+            const bool isFloor   = sameY && approxEqual (v0World.y, floorY);
+            const bool isCeiling = sameY && approxEqual (v0World.y, ceilingY);
             const bool isVertical = ! sameY;
 
-            const float averageDepth = (start.depth + end.depth) * 0.5f;
-            nearestDepth = std::min (nearestDepth, averageDepth);
-            farthestDepth = std::max (farthestDepth, averageDepth);
-
-            const auto faces = edgeFaceLookup[edgeIndex];
-            float facingAmount = 0.0f;
-            for (int i = 0; i < 2; ++i)
-            {
-                const auto normal = faceNormals[(size_t) faces[i]];
-                facingAmount = std::max (facingAmount, cameraForward.dot (normal));
-            }
-            facingAmount = juce::jlimit (-1.0f, 1.0f, facingAmount);
-
-            segments.push_back ({
-                start.screen,
-                end.screen,
-                averageDepth,
-                isFloor,
-                isCeiling,
-                isVertical,
-                facingAmount
-            });
-        }
-
-        if (segments.empty())
-            return;
-
-        nearestDepth = std::max (clipDepth, nearestDepth);
-        const float depthRange = std::max (0.001f, farthestDepth - nearestDepth);
-
-        std::sort (segments.begin(), segments.end(),
-                   [] (const EdgeSegment& lhs, const EdgeSegment& rhs)
-                   {
-                       return lhs.depth > rhs.depth;
-                   });
-
-        for (const auto& segment : segments)
-        {
-            const float depthFactor = juce::jlimit (0.0f, 1.0f,
-                                                    (segment.depth - nearestDepth) / depthRange);
-            const float distanceWeight = 1.0f - depthFactor;
-            const float facingWeight = juce::jlimit (0.0f, 1.0f, (segment.facing + 1.0f) * 0.5f);
+            const float depthAverage = std::max (params.nearPlane, (-a.z + -b.z) * 0.5f);
+            const float distanceWeight = juce::jlimit (0.0f, 1.0f, 1.0f - depthAverage / farPlane);
 
             juce::Colour baseColour = juce::Colours::whitesmoke;
+            if (isFloor)        baseColour = juce::Colour::fromRGB (118, 150, 192);
+            else if (isCeiling) baseColour = juce::Colour::fromRGB (205, 210, 220);
+            else if (isVertical) baseColour = juce::Colour::fromRGB (188, 198, 210);
 
-            if (segment.isFloor)
-                baseColour = juce::Colour::fromRGB (118, 150, 192);
-            else if (segment.isCeiling)
-                baseColour = juce::Colour::fromRGB (205, 210, 220);
-            else if (segment.isVertical)
-                baseColour = juce::Colour::fromRGB (188, 198, 210);
-
-            const float alpha = juce::jlimit (0.28f, 0.85f,
-                                              0.28f + 0.5f * distanceWeight + 0.18f * facingWeight);
-            const float width = juce::jmap (distanceWeight, 0.0f, 1.0f, 1.6f, 3.0f);
+            const float alpha = juce::jlimit (0.25f, 0.85f, 0.25f + 0.55f * distanceWeight);
+            const float width = juce::jmap (distanceWeight, 0.0f, 1.0f, 1.6f, 3.6f);
 
             g.setColour (baseColour.withAlpha (alpha));
-            g.drawLine (juce::Line<float> (segment.start, segment.end), width);
+            g.drawLine (juce::Line<float> (p0, p1), width);
         }
 
         return;
@@ -474,7 +636,9 @@ void SpeakerVisualizerComponent::updateRoomProjection()
 
 void SpeakerVisualizerComponent::setZoomFactor (float newFactor, bool fromPreset)
 {
-    const auto clamped = juce::jlimit (minZoomFactor, maxZoomFactor, newFactor);
+    const auto minZoom = cameraInside ? getInsideMinZoomForPreset (isInsidePreset (currentPreset) ? currentPreset : CameraPreset::InsideUser)
+                                          : minZoomFactor;
+    const auto clamped = juce::jlimit (minZoom, maxZoomFactor, newFactor);
     if (std::abs (clamped - zoomFactor) < 1.0e-6f && ! fromPreset)
         return;
 
@@ -569,6 +733,7 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
         cameraInside = params->inside;
         yaw          = juce::degreesToRadians (params->yawDegrees);
         pitch        = juce::degreesToRadians (params->pitchDegrees);
+        roll         = juce::degreesToRadians (params->rollDegrees);
         cameraBaseDistance = params->baseDistance;
 
         float targetZoom = outsideDefaultZoom;
@@ -580,6 +745,8 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
                 targetZoom = insideHomeDefaultZoom;
             else
                 targetZoom = insideDefaultZoom;
+
+            targetZoom = std::max (targetZoom, getInsideMinZoomForPreset (preset));
         }
 
 
@@ -595,6 +762,8 @@ void SpeakerVisualizerComponent::setCameraPreset (CameraPreset preset)
 
     }
 
+    if (cameraInside && preset == CameraPreset::InsideHome)
+        captureUserState();
 
     if (! zoomHandled)
     {
@@ -617,6 +786,7 @@ void SpeakerVisualizerComponent::mouseDown (const juce::MouseEvent& e)
     dragAnchor  = e.position;
     yawAnchor   = yaw;
     pitchAnchor = pitch;
+    rollAnchor  = roll;
 }
 
 void SpeakerVisualizerComponent::mouseDrag (const juce::MouseEvent& e)
@@ -1246,7 +1416,7 @@ juce::AffineTransform SpeakerVisualizerComponent::rotationTransform (juce::Point
 void SpeakerVisualizerComponent::applyZoomFactorToCamera()
 {
     cameraBaseDistance = juce::jmax (0.001f, cameraBaseDistance);
-    zoomFactor = juce::jlimit (minZoomFactor, maxZoomFactor, zoomFactor);
+    zoomFactor = juce::jlimit (getCurrentMinZoom(), maxZoomFactor, zoomFactor);
 
     if (cameraInside)
         cameraDistance = 0.0f;
@@ -1261,6 +1431,7 @@ void SpeakerVisualizerComponent::captureUserState()
     auto& state = getUserState (cameraInside);
     state.yaw = yaw;
     state.pitch = pitch;
+    state.roll = roll;
     state.baseDistance = cameraBaseDistance;
     state.zoom = zoomFactor;
 }
@@ -1270,8 +1441,12 @@ void SpeakerVisualizerComponent::restoreUserState (bool inside)
     const auto& state = getUserState (inside);
     yaw = state.yaw;
     pitch = state.pitch;
+    roll = state.roll;
     cameraBaseDistance = juce::jmax (0.001f, state.baseDistance);
-    zoomFactor = juce::jlimit (minZoomFactor, maxZoomFactor, state.zoom);
+    if (inside)
+        zoomFactor = juce::jlimit (getInsideMinZoomForPreset (isInsidePreset (currentPreset) ? currentPreset : CameraPreset::InsideUser), maxZoomFactor, state.zoom);
+    else
+        zoomFactor = juce::jlimit (minZoomFactor, maxZoomFactor, state.zoom);
     applyZoomFactorToCamera();
 }
 

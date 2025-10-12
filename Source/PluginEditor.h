@@ -46,6 +46,7 @@ public:
     {
         float yawDegrees;
         float pitchDegrees;
+        float rollDegrees;
         float baseDistance;
         bool  inside;
     };
@@ -54,6 +55,7 @@ public:
     {
         float yaw{ 0.0f };
         float pitch{ 0.0f };
+        float roll{ 0.0f };
         float baseDistance{ 1.0f };
         float zoom{ 1.0f };
     };
@@ -78,7 +80,7 @@ public:
 
     void setZoomFactor (float newFactor, bool fromPreset = false);
     float getZoomFactor() const noexcept { return zoomFactor; }
-    float getMinZoomFactor() const noexcept { return minZoomFactor; }
+    float getMinZoomFactor() const noexcept { return getCurrentMinZoom(); }
     float getMaxZoomFactor() const noexcept { return maxZoomFactor; }
 
     void setVisualizationMode (VisualizationMode mode);
@@ -123,6 +125,35 @@ private:
         float maxReachWorld = 1.0f;
         std::deque<juce::Point<float>> trail;
     };
+
+    struct InsideProjectionParameters
+    {
+        juce::Rectangle<float> bounds;
+        juce::Point<float> centre;
+        float widthPx = 1.0f;
+        float heightPx = 1.0f;
+        float aspect = 1.0f;
+        float zoom = 1.0f;
+        float focalX = 1.0f;
+        float focalY = 1.0f;
+        float nearPlane = 0.2f;
+        float farPlane = 10.0f;
+        float cosYaw = 1.0f;
+        float sinYaw = 0.0f;
+        float cosPitch = 1.0f;
+        float sinPitch = 0.0f;
+        float cosRoll = 1.0f;
+        float sinRoll = 0.0f;
+        juce::Vector3D<float> row0;
+        juce::Vector3D<float> row1;
+        juce::Vector3D<float> row2;
+        juce::Vector3D<float> cameraPosition {};
+        juce::Vector3D<float> cameraForward {};
+    };
+
+    InsideProjectionParameters computeInsideProjectionParameters (juce::Rectangle<float> bounds) const;
+    float getInsideMinZoomForPreset (CameraPreset preset) const noexcept;
+    float getCurrentMinZoom() const noexcept;
 
     void timerCallback() override;
     void refreshMetrics();
@@ -177,6 +208,7 @@ private:
     CameraPreset currentPreset { CameraPreset::OutsideHome };
     float yaw   = 0.0f;
     float pitch = 0.0f;
+    float roll  = 0.0f;
     bool cameraInside = false;
 
     VisualizationMode visualizationMode { VisualizationMode::DirectionalLobes };
@@ -206,6 +238,7 @@ private:
     juce::Point<float> dragAnchor;
     float yawAnchor = 0.0f;
     float pitchAnchor = 0.0f;
+    float rollAnchor = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpeakerVisualizerComponent)
 };
