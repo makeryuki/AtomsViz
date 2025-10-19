@@ -50,6 +50,9 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - Alternatively, unpack `dist/AtmosViz_v0.3.0_Windows_VST3.zip` and drop the extracted bundle into your VST3 directory.
 - Re-scan plug-ins in the host DAW after copying.
 
+## Running the Standalone
+- Extract dist/AtmosViz_v0.3.0_Windows_Standalone.zip.
+- Run AtmosViz.exe; no installation is required, but Windows may prompt for confirmation on first launch.
 ## Documentation
 - [User Manual](docs/user_manual.md) - step-by-step installation and UI walkthrough
 The `docs/` directory contains the following refreshed documents:
@@ -76,6 +79,8 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
+
+
 
 
 
