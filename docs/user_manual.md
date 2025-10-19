@@ -3,11 +3,22 @@
 **Limitation:** AtmosViz currently supports only 7.1.4 channel layouts. Other bus configurations are not yet supported.
 
 ## 1. Installation
-1. Download the Release zip (`dist/AtmosViz_v0.3.0_Windows_VST3.zip`) from the repository or GitHub Release page.
-2. Extract the archive; you will get `AtmosViz.vst3` (a folder bundle).
-3. Copy the entire bundle into `C:\Program Files\Common Files\VST3`.
-4. Launch your DAW and rescan plug-ins. AtmosViz appears under *Effects*.
-5. For the standalone tool, run `Builds/VisualStudio2022/x64/Release/Standalone Plugin/AtmosViz.exe`.
+**Windows (VST3 + Standalone)**
+1. Download `dist/AtmosViz_v0.3.0_Windows_VST3.zip`.
+2. Extract; you will get `AtmosViz.vst3` (bundle folder).
+3. Copy the bundle into `C:\Program Files\Common Files\VST3\`.
+4. Launch your DAW and rescan plug-ins (most hosts list AtmosViz under *Effects*).
+5. Extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` and run `AtmosViz.exe` for the standalone tool.
+
+**macOS (AU / VST3 / Standalone / CLAP)**
+1. Download the macOS release zips (`dist/AtmosViz_v0.3.0_macOS_AU.zip`, `dist/AtmosViz_v0.3.0_macOS_VST3.zip`, `dist/AtmosViz_v0.3.0_macOS_Standalone.zip`) and/or the CLAP bundle (`dist/AtmosViz_v0.3.0_macOS_CLAP.clap`).
+2. Extract the relevant archive(s). Each plug-in is a bundle (`AtmosViz.component`, `AtmosViz.vst3`, `AtmosViz.clap`).
+3. Copy bundles to the standard system locations:
+   - AU: `/Library/Audio/Plug-Ins/Components/`
+   - VST3: `/Library/Audio/Plug-Ins/VST3/`
+   - CLAP: `/Library/Audio/Plug-Ins/CLAP/`
+4. For the standalone tool, drag `AtmosViz.app` into `/Applications/` (or launch directly from the extracted folder). On first run, macOS Gatekeeper may prompt you to approve the binary (`System Settings > Privacy & Security`).
+5. Rescan plug-ins in your host after copying. Some hosts (Logic Pro, MainStage) require a restart to validate new Audio Units.
 
 ## 2. Quick Start
 1. Open AtmosViz on an Atmos-capable session.
@@ -56,7 +67,8 @@
 ## 7. Troubleshooting
 | Symptom | Remedy |
 |---------|--------|
-| Plug-in missing in DAW | Confirm the bundle sits in `\VST3\` and re-scan. If still missing, copy `AtmosViz.vst3` while DAW is closed. |
+| Plug-in missing in DAW | Confirm the bundle sits in `\VST3\` (Windows) or `/Library/Audio/Plug-Ins/{VST3,Components,CLAP}` (macOS) and re-scan while the host is closed. |
+| macOS AU not validated | Open `System Settings ▸ Privacy & Security`, allow AtmosViz if Gatekeeper blocked it, then rerun the host so AU validation can complete. |
 | Camera jumps unexpectedly | Check Slider Mode (Zoom vs Draw Scale). Reset by right-clicking the visualiser. |
 | Colour Mix Pad does not open | Ensure the editor window has focus; the pad opens as a floating call-out anchored to the button. |
 | Heatmap slider hidden | Only visible while *Radiation Heatmap* view mode is active. |
@@ -69,8 +81,6 @@
 - Revisit Inside Top orientation (front wall alignment).
 - Automate visual regression via scripted camera sweeps.
 - Add optional 3D asset overlay for room treatment cues.
-
-
 
 
 

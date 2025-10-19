@@ -1,6 +1,7 @@
 # AtmosViz Work Log
 
 ## 2025-10-19
+- Generated macOS Release builds (AU, VST3, Standalone) via Xcode and archived them under `dist/`.- Built macOS CLAP bundle with `/Applications/JUCE` toolchain and added macOS packaging commands.- Expanded README, developer guide, checklist, requirements, and user manual with macOS installation/build notes.
 - Integrated clap-juce-extensions as a submodule and generated a Release CLAP build via CMake.
 - Added standalone/CLAP distribution bundles under `dist/` and documented installation steps.
 - Updated developer and release guides with CLAP build instructions.

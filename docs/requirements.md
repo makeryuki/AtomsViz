@@ -13,6 +13,7 @@
 | FR-08 | Persist UI state (view mode, camera preset, zoom, colour weights) across sessions. | Done |
 | FR-09 | Document build, usage, and release processes in the repository. | Done |
 | FR-10 | Produce a CLAP plug-in using clap-juce-extensions and ship it alongside other artifacts. | Done |
+| FR-11 | Publish macOS AU, VST3, Standalone, and CLAP bundles equivalent to Windows deliverables. | Done |
 
 ## Non-Functional Requirements
 | ID | Description | Status |

@@ -32,6 +32,28 @@
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
   <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="AtmosViz"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="AtmosViz"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="/Users/shimizu/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="AtmosViz"/>

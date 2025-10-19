@@ -29,17 +29,24 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - `Source/` - plug-in and editor implementation.
 - `JuceLibraryCode/` - auto-generated JUCE wrappers.
 - `Builds/VisualStudio2022/` - generated Visual Studio projects (VST3, Standalone, helper).
+- `Builds/MacOSX/` - generated Xcode projects and build artefacts (AU, VST3, Standalone).
 - `dist/AtmosViz_v0.3.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
 - `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` - portable standalone executable.
 - `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
+- `dist/AtmosViz_v0.3.0_macOS_VST3.zip` - macOS VST3 bundle (Release build).
+- `dist/AtmosViz_v0.3.0_macOS_AU.zip` - macOS Audio Unit component (Release build).
+- `dist/AtmosViz_v0.3.0_macOS_Standalone.zip` - macOS standalone `.app` bundle.
+- `dist/AtmosViz_v0.3.0_macOS_CLAP.clap` - macOS CLAP plug-in bundle.
 - `docs/` - up-to-date design notes and user/developer documentation (see below).
 
 ## Building
+
+### Windows
 1. Install **Visual Studio 2022** with the Desktop development with C++ workload.
 2. Install JUCE 8.0.1 (path referenced in the projects: `C:\\juce-8.0.1-windows\\JUCE`).
 3. From the repository root, run:
    ```powershell
-   pwsh -File.\build_vst3.ps1 -Configuration Release
+   pwsh -File .\build_vst3.ps1 -Configuration Release
    ```
    This produces:
    - VST3 bundle at `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3`
@@ -47,19 +54,41 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 
 > **Note:** The JUCE VST3 manifest helper currently exits with `MSB3073`. The plug-in is still built correctly; the post-build hook can be disabled if the manifest is not required.
 
+### macOS
+1. Install **Xcode 15** (includes `xcodebuild`) plus the matching Command Line Tools.
+2. Install JUCE 8.0.1 and Projucer (drag the JUCE folder to `/Applications/JUCE` or clone to a local path). Update `AtmosViz.jucer` module search paths if JUCE lives elsewhere.
+3. Regenerate the Xcode project:
+   ```bash
+   /Applications/JUCE/Projucer.app/Contents/MacOS/Projucer --resave AtmosViz.jucer
+   ```
+4. Build the plug-in formats:
+   ```bash
+   xcodebuild -project Builds/MacOSX/AtmosViz.xcodeproj -scheme "AtmosViz - AU" -configuration Release build
+   xcodebuild -project Builds/MacOSX/AtmosViz.xcodeproj -scheme "AtmosViz - VST3" -configuration Release build
+   xcodebuild -project Builds/MacOSX/AtmosViz.xcodeproj -scheme "AtmosViz - Standalone Plugin" -configuration Release build
+   ```
+   Release artefacts land in `Builds/MacOSX/build/Release/` (`.component`, `.vst3`, `.app`).
+5. Build the CLAP bundle via `clap-juce-extensions`:
+   ```bash
+   cmake -B build-clap-mac -S . -G "Xcode" -DJUCER_GENERATOR=Xcode -DPATH_TO_JUCE=/Applications/JUCE
+   cmake --build build-clap-mac --config Release
+   ```
+   The finished bundle is at `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`.
+
 ## Installing the Plug-in
-- Copy the entire folder `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` into `C:\\Program Files\\Common Files\\VST3`. Only the file `Contents\\x86_64-win\\AtmosViz.vst3` is required by most hosts.
-- Alternatively, unpack `dist/AtmosViz_v0.3.0_Windows_VST3.zip` and drop the extracted bundle into your VST3 directory.
+- **Windows (VST3):** copy `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.3.0_Windows_VST3.zip`) into `C:\Program Files\Common Files\VST3`.
+- **macOS (VST3):** copy `Builds/MacOSX/build/Release/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.3.0_macOS_VST3.zip`) into `/Library/Audio/Plug-Ins/VST3/`.
+- **macOS (AU):** copy `Builds/MacOSX/build/Release/AtmosViz.component` (or unzip `dist/AtmosViz_v0.3.0_macOS_AU.zip`) into `/Library/Audio/Plug-Ins/Components/`.
 - Re-scan plug-ins in the host DAW after copying.
 
 ## Running the Standalone
-- Extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip`.
-- Run `AtmosViz.exe`; no installation is required, but Windows may prompt for confirmation on first launch.
+- **Windows:** extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` and run `AtmosViz.exe`.
+- **macOS:** unzip `dist/AtmosViz_v0.3.0_macOS_Standalone.zip`, drag `AtmosViz.app` to `/Applications` (or run in-place), then launch via Finder. macOS Gatekeeper may prompt on first launch.
 
 ## Installing the CLAP Plug-in
-- Copy `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
-- If your host scans a custom CLAP directory, place the `.clap` file there instead.
-- No additional resources are required; the `.clap` bundle already contains the binaries generated via clap-juce-extensions.
+- **Windows:** copy `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
+- **macOS:** copy `dist/AtmosViz_v0.3.0_macOS_CLAP.clap` (or `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`) into `/Library/Audio/Plug-Ins/CLAP/`.
+- If your host scans custom folders, place the `.clap` bundle in the appropriate directory and trigger a plug-in rescan.
 
 ## Documentation
 - [User Manual](docs/user_manual.md) - step-by-step installation and UI walkthrough
@@ -87,7 +116,6 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
-
 
 
 
