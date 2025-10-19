@@ -59,3 +59,4 @@ Builds/**/*.cache
 /*.png
 projectPoint_current.txt
 
+build-clap/

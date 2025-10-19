@@ -2,12 +2,13 @@
 
 ## Environment Setup
 1. Install Visual Studio 2022 (17.11+) with C++ Desktop workload.
-2. Install CMake tools (optional) for auxiliary utilities.
+2. Install CMake 3.15+ (required for CLAP builds).
 3. Install JUCE 8.0.1 and update `JuceLibraryCode/JuceHeader.h` include paths if JUCE is stored elsewhere.
-4. Clone the repository and initialise subdirectories:
+4. Clone the repository and initialise submodules:
    ```powershell
    git clone https://github.com/makeryuki/AtomsViz.git
    cd AtmosViz
+   git submodule update --init --recursive
    ```
 
 ## Building
@@ -18,9 +19,21 @@
   - `Builds/VisualStudio2022/x64/<Config>/VST3/AtmosViz.vst3`
   - `Builds/VisualStudio2022/x64/<Config>/Standalone Plugin/AtmosViz.exe`
 
+### Building the CLAP plug-in
+1. Ensure the Visual Studio Release configuration has been built at least once (produces `Shared Code/AtmosViz.lib`).
+2. Configure the CMake project that wraps the Projucer build:
+   ```powershell
+   cmake -B build-clap -S . -G "Visual Studio 17 2022"
+   ```
+3. Build the Release configuration:
+   ```powershell
+   cmake --build build-clap --config Release
+   ```
+4. The resulting plug-in is emitted at `build-clap/AtmosViz_artefacts/Release/AtmosViz.clap`.
+
 ## Debugging Tips
 - Launch the standalone exe for rapid iteration; attach debugger via Visual Studio if needed.
-- Use JUCE’s Projucer for component layout experiments, but keep source of truth in `Source/`.
+- Use JUCE's Projucer for component layout experiments, but keep source of truth in `Source/`.
 - Enable JUCE assertions in Debug to catch camera math regressions.
 - Add temporary `DBG` statements sparingly; remove before committing.
 
@@ -39,7 +52,8 @@
 ## Release Packaging
 See `docs/release_checklist.md` for the step-by-step routine. Key automation pieces:
 - `build_vst3.ps1 -Configuration Release`
-- `Compress-Archive` call to create `dist/AtmosViz_v<version>_Windows_VST3.zip`
+- `cmake --build build-clap --config Release`
+- `Compress-Archive` calls to create distribution zips and copy the `.clap`
 - Git tag + GitHub Release creation
 
 ## Testing Strategy (Current)
@@ -49,5 +63,5 @@ See `docs/release_checklist.md` for the step-by-step routine. Key automation pie
 
 ## Future Enhancements
 - Add unit tests for `computeInsideProjectionParameters`.
-- Integrate automated screenshot capture using JUCE’s `Image` class for diffing.
+- Integrate automated screenshot capture using JUCE's `Image` class for diffing.
 - Investigate manifest helper fix to remove post-build warnings.

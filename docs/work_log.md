@@ -1,8 +1,14 @@
 # AtmosViz Work Log
 
+## 2025-10-19
+- Integrated clap-juce-extensions as a submodule and generated a Release CLAP build via CMake.
+- Added standalone/CLAP distribution bundles under `dist/` and documented installation steps.
+- Updated developer and release guides with CLAP build instructions.
+- Added GPLv3 license and archived legacy documentation assets under `docs/_archive/20251012/`.
+
 ## 2025-10-12
 - Normalised Inside zoom constraints (Home/User default 60%, Top default 25%, minimum 40%/25%).
-- Adjusted Home/User orientation (yaw -95°, pitch -5°) to face front wall from origin.
+- Adjusted Home/User orientation (yaw -95 deg, pitch -5 deg) to face front wall from origin.
 - Rebuilt Release artefacts and published `dist/AtmosViz_v0.3.0_Windows_VST3.zip`.
 - Refreshed documentation set (README, design docs, manuals) and archived legacy notes under `docs/_archive/20251012`.
 - Verified Release standalone build launches successfully.

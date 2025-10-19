@@ -29,7 +29,9 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - `Source/` - plug-in and editor implementation.
 - `JuceLibraryCode/` - auto-generated JUCE wrappers.
 - `Builds/VisualStudio2022/` - generated Visual Studio projects (VST3, Standalone, helper).
-- `dist/AtmosViz_v0.3.0_Windows_VST3.zip` - release build artifact ready for distribution.
+- `dist/AtmosViz_v0.3.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
+- `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` - portable standalone executable.
+- `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
 - `docs/` - up-to-date design notes and user/developer documentation (see below).
 
 ## Building
@@ -37,7 +39,7 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 2. Install JUCE 8.0.1 (path referenced in the projects: `C:\\juce-8.0.1-windows\\JUCE`).
 3. From the repository root, run:
    ```powershell
-   pwsh -File .\build_vst3.ps1 -Configuration Release
+   pwsh -File.\build_vst3.ps1 -Configuration Release
    ```
    This produces:
    - VST3 bundle at `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3`
@@ -51,8 +53,14 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - Re-scan plug-ins in the host DAW after copying.
 
 ## Running the Standalone
-- Extract dist/AtmosViz_v0.3.0_Windows_Standalone.zip.
-- Run AtmosViz.exe; no installation is required, but Windows may prompt for confirmation on first launch.
+- Extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip`.
+- Run `AtmosViz.exe`; no installation is required, but Windows may prompt for confirmation on first launch.
+
+## Installing the CLAP Plug-in
+- Copy `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
+- If your host scans a custom CLAP directory, place the `.clap` file there instead.
+- No additional resources are required; the `.clap` bundle already contains the binaries generated via clap-juce-extensions.
+
 ## Documentation
 - [User Manual](docs/user_manual.md) - step-by-step installation and UI walkthrough
 The `docs/` directory contains the following refreshed documents:
@@ -79,6 +87,11 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
+
+
+
+
+
 
 
 

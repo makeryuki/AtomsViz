@@ -1,0 +1,4 @@
+[submodule "external/clap-juce-extensions"]
+	path = external/clap-juce-extensions
+	url = https://github.com/free-audio/clap-juce-extensions.git
+	branch = main
