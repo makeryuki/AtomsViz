@@ -5,4 +5,6 @@
 
 */
 
+#if __has_include(<juce_graphics/juce_graphics_Sheenbidi.c>)
 #include <juce_graphics/juce_graphics_Sheenbidi.c>
+#endif

@@ -40,7 +40,7 @@ namespace
     constexpr float outsideDefaultZoom     = 1.0f;
 
     constexpr std::array<PresetDefinition, 12> presetDefinitions = { {
-        { CameraPreset::OutsideHome,  { -110.0f, -18.0f,   0.0f, outsideHomeBaseDistance,  false } },
+        { CameraPreset::OutsideHome,  {   70.0f, -18.0f,   0.0f, outsideHomeBaseDistance,  false } },
         { CameraPreset::OutsideFront, {  -90.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideBack,  {   90.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
         { CameraPreset::OutsideLeft,  {    0.0f,   0.0f,   0.0f, outsideOrbitBaseDistance, false } },
@@ -131,21 +131,21 @@ void SpeakerVisualizerComponent::updateProjectionScale()
     }
 
     const auto fill = outsideProjectionScale;
-    const auto cosYaw   = std::cos (yaw);
-    const auto sinYaw   = std::sin (yaw);
-    const auto cosPitch = std::cos (pitch);
-    const auto sinPitch = std::sin (pitch);
+    auto orientation = computeCameraOrientation();
+    orientation.right = (-orientation.right).normalised();
+    orientation.up    = (orientation.forward ^ orientation.right).normalised();
+    const auto cameraPosition = orientation.forward * (-cameraDistance);
 
     float maxExtent = 0.0f;
 
     for (const auto& vertex : roomVerticesModel)
     {
-        const auto x1 = vertex.x * cosYaw - vertex.z * sinYaw;
-        const auto z1 = vertex.x * sinYaw + vertex.z * cosYaw;
-        const auto y2 = vertex.y * cosPitch - z1 * sinPitch;
+        const auto relative = vertex - cameraPosition;
+        const float camX = orientation.right.x * relative.x + orientation.right.y * relative.y + orientation.right.z * relative.z;
+        const float camY = orientation.up.x    * relative.x + orientation.up.y    * relative.y + orientation.up.z    * relative.z;
 
-        maxExtent = std::max (maxExtent, std::abs (x1));
-        maxExtent = std::max (maxExtent, std::abs (y2));
+        maxExtent = std::max (maxExtent, std::abs (camX));
+        maxExtent = std::max (maxExtent, std::abs (camY));
     }
 
     if (maxExtent < 1.0e-4f)
@@ -182,30 +182,77 @@ SpeakerVisualizerComponent::ProjectedPoint SpeakerVisualizerComponent::projectPo
         };
     }
 
-    const auto cosYaw   = std::cos (yaw);
-    const auto sinYaw   = std::sin (yaw);
-    const auto cosPitch = std::cos (pitch);
-    const auto sinPitch = std::sin (pitch);
+    auto orientation = computeCameraOrientation();
+    orientation.right = (-orientation.right).normalised();
+    orientation.up    = (orientation.forward ^ orientation.right).normalised();
+    const auto cameraPosition = orientation.forward * (-cameraDistance);
+    const auto relative = point - cameraPosition;
 
-    const float x1 = point.x * cosYaw - point.z * sinYaw;
-    const float z1 = point.x * sinYaw + point.z * cosYaw;
-    const float y2 = point.y * cosPitch - z1 * sinPitch;
-    const float z2 = point.y * sinPitch + z1 * cosPitch;
+    const float camX = orientation.right.x * relative.x + orientation.right.y * relative.y + orientation.right.z * relative.z;
+    const float camY = orientation.up.x    * relative.x + orientation.up.y    * relative.y + orientation.up.z    * relative.z;
+    const float camZ = orientation.forward.x * relative.x + orientation.forward.y * relative.y + orientation.forward.z * relative.z;
 
-    const float depth  = cameraDistance - z2;
-    const float perspectiveFactor = 1.0f;
+    const float depth = std::max (camZ, 1.0e-4f);
     const float scale = projectionScale;
 
-    return {
-        { centre.x + x1 * scale * perspectiveFactor,
-          centre.y - y2 * scale * perspectiveFactor },
-        depth
-    };
+    const juce::Point<float> screen { centre.x + camX * scale, centre.y - camY * scale };
+
+    return { screen, depth };
 }
 
 float SpeakerVisualizerComponent::getInsideMinZoomForPreset (CameraPreset preset) const noexcept
 {
     return preset == CameraPreset::InsideTop ? insideTopMinZoom : insideDefaultMinZoom;
+}
+
+SpeakerVisualizerComponent::CameraOrientation SpeakerVisualizerComponent::computeCameraOrientation() const noexcept
+{
+    CameraOrientation orientation;
+
+    const float cy = std::cos (yaw);
+    const float sy = std::sin (yaw);
+    const float cp = std::cos (pitch);
+    const float sp = std::sin (pitch);
+    const float cr = std::cos (roll);
+    const float sr = std::sin (roll);
+
+    const float Ry[3][3] = { { cy, 0.0f, -sy },
+                             { 0.0f, 1.0f, 0.0f },
+                             { sy, 0.0f,  cy } };
+
+    const float Rx[3][3] = { { 1.0f, 0.0f, 0.0f },
+                             { 0.0f,  cp, -sp },
+                             { 0.0f,  sp,  cp } };
+
+    const float Rz[3][3] = { {  cr, -sr, 0.0f },
+                             {  sr,  cr, 0.0f },
+                             { 0.0f, 0.0f, 1.0f } };
+
+    auto multiply = [] (const float a[3][3], const float b[3][3], float result[3][3])
+    {
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+            {
+                float value = 0.0f;
+                for (int k = 0; k < 3; ++k)
+                    value += a[i][k] * b[k][j];
+                result[i][j] = value;
+            }
+    };
+
+    float temp[3][3];
+    multiply (Rx, Ry, temp);
+
+    float R[3][3];
+    multiply (Rz, temp, R);
+
+    orientation.forward = juce::Vector3D<float> { -R[2][0], -R[2][1], -R[2][2] }.normalised();
+
+    const auto tentativeUp = juce::Vector3D<float> { R[1][0], R[1][1], R[1][2] }.normalised();
+    orientation.right = (orientation.forward ^ tentativeUp).normalised();
+    orientation.up    = (orientation.right ^ orientation.forward).normalised();
+
+    return orientation;
 }
 
 float SpeakerVisualizerComponent::getCurrentMinZoom() const noexcept
@@ -320,30 +367,14 @@ void SpeakerVisualizerComponent::applyOrbit (DisplaySpeaker& speaker) const
     }
 
     const auto aim = speaker.definition.aimDirection;
+    auto orientation = computeCameraOrientation();
+    orientation.right = (-orientation.right).normalised();
+    orientation.up    = (orientation.forward ^ orientation.right).normalised();
 
-    const auto cosYaw   = std::cos (yaw);
-    const auto sinYaw   = std::sin (yaw);
-    const auto cosPitch = std::cos (pitch);
-    const auto sinPitch = std::sin (pitch);
-    const auto cosRoll  = std::cos (roll);
-    const auto sinRoll  = std::sin (roll);
+    const float aimCameraX = orientation.right.x * aim.x + orientation.right.y * aim.y + orientation.right.z * aim.z;
+    const float aimCameraY = orientation.up.x    * aim.x + orientation.up.y    * aim.y + orientation.up.z    * aim.z;
 
-    const float aimX1 = aim.x * cosYaw - aim.z * sinYaw;
-    const float aimZ1 = aim.x * sinYaw + aim.z * cosYaw;
-    const float aimY1 = aim.y;
-
-    float aimX2 = aimX1;
-    float aimY2 = aimY1 * cosPitch - aimZ1 * sinPitch;
-
-    if (cameraInside)
-    {
-        const float xRolled = aimX2 * cosRoll - aimY2 * sinRoll;
-        const float yRolled = aimX2 * sinRoll + aimY2 * cosRoll;
-        aimX2 = xRolled;
-        aimY2 = yRolled;
-    }
-
-    auto dir2D = juce::Point<float> (aimX2, -aimY2);
+    auto dir2D = juce::Point<float> (aimCameraX, -aimCameraY);
     const auto len = dir2D.getDistanceFromOrigin();
 
     if (len > 1.0e-4f) dir2D /= len;
@@ -355,11 +386,6 @@ void SpeakerVisualizerComponent::applyOrbit (DisplaySpeaker& speaker) const
 void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
 {
     updateRoomProjection();
-
-    const auto cosYaw   = std::cos (yaw);
-    const auto sinYaw   = std::sin (yaw);
-    const auto cosPitch = std::cos (pitch);
-    const auto sinPitch = std::sin (pitch);
 
     static constexpr int faceIndices[6][4] =
     {
@@ -554,15 +580,29 @@ void SpeakerVisualizerComponent::drawRoom (juce::Graphics& g)
     }
 
 
+    auto orientation = computeCameraOrientation();
+    orientation.right = (-orientation.right).normalised();
+    orientation.up    = (orientation.forward ^ orientation.right).normalised();
+    const auto cameraPosition = orientation.forward * (-cameraDistance);
+
+    auto faceCentre = [&] (int face) -> juce::Vector3D<float>
+    {
+        juce::Vector3D<float> sum {};
+        for (int i = 0; i < 4; ++i)
+            sum += roomVerticesModel[(size_t) faceIndices[face][i]];
+        return sum / 4.0f;
+    };
 
     std::array<bool, 6> faceVisible {};
     for (size_t face = 0; face < faceVisible.size(); ++face)
     {
-        const auto& normalModel = faceNormals[face];
-        const float z1 = normalModel.x * sinYaw + normalModel.z * cosYaw;
-        const float z2 = normalModel.y * sinPitch + z1 * cosPitch;
+        const auto toFace = faceCentre((int) face) - cameraPosition;
+        const auto& normal = faceNormals[face];
+        const float dot = normal.x * toFace.x
+                        + normal.y * toFace.y
+                        + normal.z * toFace.z;
 
-        faceVisible[face] = z2 < 0.0f;
+        faceVisible[face] = dot > 0.0f;
     }
 
     struct EdgeProjection

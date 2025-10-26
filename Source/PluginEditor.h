@@ -151,7 +151,15 @@ private:
         juce::Vector3D<float> cameraForward {};
     };
 
+    struct CameraOrientation
+    {
+        juce::Vector3D<float> right;
+        juce::Vector3D<float> up;
+        juce::Vector3D<float> forward;
+    };
+
     InsideProjectionParameters computeInsideProjectionParameters (juce::Rectangle<float> bounds) const;
+    CameraOrientation computeCameraOrientation() const noexcept;
     float getInsideMinZoomForPreset (CameraPreset preset) const noexcept;
     float getCurrentMinZoom() const noexcept;
 
