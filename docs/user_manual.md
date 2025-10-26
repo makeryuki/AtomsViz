@@ -4,14 +4,14 @@
 
 ## 1. Installation
 **Windows (VST3 + Standalone)**
-1. Download `dist/AtmosViz_v0.3.0_Windows_VST3.zip`.
+1. Download `dist/AtmosViz_v0.4.0_Windows_VST3.zip`.
 2. Extract; you will get `AtmosViz.vst3` (bundle folder).
 3. Copy the bundle into `C:\Program Files\Common Files\VST3\`.
 4. Launch your DAW and rescan plug-ins (most hosts list AtmosViz under *Effects*).
-5. Extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` and run `AtmosViz.exe` for the standalone tool.
+5. Extract `dist/AtmosViz_v0.4.0_Windows_Standalone.zip` and run `AtmosViz.exe` for the standalone tool.
 
 **macOS (AU / VST3 / Standalone / CLAP)**
-1. Download the macOS release zips (`dist/AtmosViz_v0.3.0_macOS_AU.zip`, `dist/AtmosViz_v0.3.0_macOS_VST3.zip`, `dist/AtmosViz_v0.3.0_macOS_Standalone.zip`) and/or the CLAP bundle (`dist/AtmosViz_v0.3.0_macOS_CLAP.clap`).
+1. Download the macOS release zips currently published (`dist/AtmosViz_v0.3.0_macOS_AU.zip`, `dist/AtmosViz_v0.3.0_macOS_VST3.zip`, `dist/AtmosViz_v0.3.0_macOS_Standalone.zip`) and/or the CLAP bundle (`dist/AtmosViz_v0.3.0_macOS_CLAP.clap`).
 2. Extract the relevant archive(s). Each plug-in is a bundle (`AtmosViz.component`, `AtmosViz.vst3`, `AtmosViz.clap`).
 3. Copy bundles to the standard system locations:
    - AU: `/Library/Audio/Plug-Ins/Components/`
@@ -30,19 +30,20 @@
 4. Use the **Zoom slider** (10%-200%). Inside presets honour minimum zooms (40% or 25%).
 5. Adjust **Heatmap Density** (if visible) to refine spatial sampling.
 6. Tweak **Band Colour Weights** or open the **Colour Mix Pad** to rebalance low/mid/high emphasis.
+7. Adjust the **Visualization Gain** slider to expand or shrink lobes without altering the camera zoom.
 
 ## 3. Controls Reference
 | Control | Location | Description |
 |---------|----------|-------------|
-| View Mode combo | Header, left | Switches between visualisation algorithms. Heatmap reveals density slider and heatmap legend. |
+| View Mode combo | Header, left | Switches between visualisation algorithms. Heatmap reveals the density slider. |
 | Slider Mode combo | Header | Chooses whether the horizontal slider controls Zoom or Draw Scale. |
-| Zoom/Draw Scale slider | Header | Zoom: 10-200%. Draw Scale: scales speaker glyph size without moving the camera. |
-| Heatmap Density slider | Header (Heatmap only) | Levels 1-5 labelled Coarse, Low, Medium, High, Ultra. Updates sampling grid and legend caption. |
-| Band Colour sliders | Header | Three linear sliders (Low, Mid, High) that weight colour contribution. |
-| Colour Mix Pad button | Header | Opens triangular pad; dragging any node rewrites band weights. |
-| Colour Legend | Header, right | Shows gradient for current mode. For Heatmap: Low/Mid/High labels with colour ramp. |
-| Camera preset buttons | Left of content | Instant view changes for Inside/Outside sets. User stores last manual orientation. |
-| Reset button | Context menu | Right-click the visualiser to reset to User defaults. |
+| Zoom/Draw Scale slider | Header | Zoom: 10-200% with Inside minimums enforced. Draw Scale adjusts glyph reach independently of camera position. |
+| Visualization Gain slider | Header | Scales lobes and trails between -50% and +100% relative to the baseline, independent of the zoom slider. |
+| Heatmap Density slider | Header (Heatmap only) | Levels 1-5 (Coarse -> Ultra) adjusting sampling grid resolution. |
+| Band Colour sliders | Header | Three linear Low/Mid/High controls that weight colour contribution. |
+| Colour Mix Pad button | Header | Opens the triangular pad; dragging a node rewrites band weights. |
+| Camera preset buttons | Header rows | Instant view changes for Inside/Outside sets. User stores last manual orientation. |
+| Reset to User | Context menu | Right-click the visualiser to restore the stored User state. |
 
 ## 4. Camera Behaviour
 - **Inside Home/User**: Camera fixed at room origin. Defaults yaw -95 deg, pitch -5 deg, zoom 60%. Wheel clamps to >=40%.
@@ -62,7 +63,7 @@
   - 3: 9x9x7
   - 4: 11x11x9
   - 5: 13x13x11
-- Legend labels map energy to colour gradient; low energy stays blue, mid energy green, high energy orange/red.
+- Colours follow a blue �� green �� amber �� red gradient that maps the normalised energy range for the current frame.
 
 ## 7. Troubleshooting
 | Symptom | Remedy |
@@ -81,6 +82,9 @@
 - Revisit Inside Top orientation (front wall alignment).
 - Automate visual regression via scripted camera sweeps.
 - Add optional 3D asset overlay for room treatment cues.
+
+
+
 
 
 

@@ -10,13 +10,13 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
   - Inside presets lock the camera to the listening position, enforcing minimum zooms (40% for Home/User/Front/Back/Left/Right, 25% for Top) so the room never collapses.
   - Outside presets keep an orthographic cube to inspect speaker placement without perspective distortion.
 - **Radiation Heatmap toolkit**
-  - Density slider (Coarse to Ultra) reshapes the sampling grid from 5x5x3 up to 13x13x11 cells.
-  - Inline legend explains the blue->green->amber->red intensity ramp and updates instantly with the selected mode.
+  - Density slider (Coarse to Ultra) reshapes the sampling grid from 5�~5�~3 up to 13�~13�~11 cells.
+  - Colours follow a blue �� green �� amber �� red ramp that mirrors the per-frame energy range (see `docs/visualization_reference.md`).
   - Energy smoothing retains responsiveness while avoiding frame-to-frame flicker in quiet passages.
-- **Colour mixing controls**
+- **Colour mixing & scaling controls**
   - Low/Mid/High sliders expose precise weighting for frequency emphasis.
   - Colour Mix Pad call-out mirrors the sliders with a barycentric triangle UI so you can balance the palette visually.
-  - Legend and speaker glyphs stay synchronised with weight changes for immediate feedback.
+  - New *Visualization Gain* slider adjusts lobe and glyph reach independently from camera zoom, replacing the legacy legend framing.
 - **Temporal analytics suite**
   - Temporal Trails render motion paths with fading opacity to inspect object movement.
   - Peak Hold view highlights the latest per-speaker peak for troubleshooting underused channels.
@@ -30,11 +30,11 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - `JuceLibraryCode/` - auto-generated JUCE wrappers.
 - `Builds/VisualStudio2022/` - generated Visual Studio projects (VST3, Standalone, helper).
 - `Builds/MacOSX/` - generated Xcode projects and build artefacts (AU, VST3, Standalone).
-- `dist/AtmosViz_v0.3.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
-- `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` - portable standalone executable.
-- `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
-- `dist/AtmosViz_v0.3.0_macOS_VST3.zip` - macOS VST3 bundle (Release build).
-- `dist/AtmosViz_v0.3.0_macOS_AU.zip` - macOS Audio Unit component (Release build).
+- `dist/AtmosViz_v0.4.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
+- `dist/AtmosViz_v0.4.0_Windows_Standalone.zip` - portable standalone executable.
+- `dist/AtmosViz_v0.4.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
+- `dist/AtmosViz_v0.3.0_macOS_VST3.zip` - macOS VST3 bundle (latest published macOS build).
+- `dist/AtmosViz_v0.3.0_macOS_AU.zip` - macOS Audio Unit component.
 - `dist/AtmosViz_v0.3.0_macOS_Standalone.zip` - macOS standalone `.app` bundle.
 - `dist/AtmosViz_v0.3.0_macOS_CLAP.clap` - macOS CLAP plug-in bundle.
 - `docs/` - up-to-date design notes and user/developer documentation (see below).
@@ -76,17 +76,17 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
    The finished bundle is at `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`.
 
 ## Installing the Plug-in
-- **Windows (VST3):** copy `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.3.0_Windows_VST3.zip`) into `C:\Program Files\Common Files\VST3`.
+- **Windows (VST3):** copy `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.4.0_Windows_VST3.zip`) into `C:\Program Files\Common Files\VST3`.
 - **macOS (VST3):** copy `Builds/MacOSX/build/Release/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.3.0_macOS_VST3.zip`) into `/Library/Audio/Plug-Ins/VST3/`.
 - **macOS (AU):** copy `Builds/MacOSX/build/Release/AtmosViz.component` (or unzip `dist/AtmosViz_v0.3.0_macOS_AU.zip`) into `/Library/Audio/Plug-Ins/Components/`.
 - Re-scan plug-ins in the host DAW after copying.
 
 ## Running the Standalone
-- **Windows:** extract `dist/AtmosViz_v0.3.0_Windows_Standalone.zip` and run `AtmosViz.exe`.
+- **Windows:** extract `dist/AtmosViz_v0.4.0_Windows_Standalone.zip` and run `AtmosViz.exe`.
 - **macOS:** unzip `dist/AtmosViz_v0.3.0_macOS_Standalone.zip`, drag `AtmosViz.app` to `/Applications` (or run in-place), then launch via Finder. macOS Gatekeeper may prompt on first launch.
 
 ## Installing the CLAP Plug-in
-- **Windows:** copy `dist/AtmosViz_v0.3.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
+- **Windows:** copy `dist/AtmosViz_v0.4.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
 - **macOS:** copy `dist/AtmosViz_v0.3.0_macOS_CLAP.clap` (or `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`) into `/Library/Audio/Plug-Ins/CLAP/`.
 - If your host scans custom folders, place the `.clap` bundle in the appropriate directory and trigger a plug-in rescan.
 
@@ -111,11 +111,12 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ## Support & Next Steps
 - Verify Inside presets after any camera math change; Outside must remain axis-aligned.
-- Upcoming tasks (as of 2025-10-12): adjust Inside Top orientation, verify Radiation Heatmap column coverage.
+- Upcoming tasks (snapshot): adjust Inside Top orientation and verify Radiation Heatmap column coverage.
 - For issues or feature proposals, file GitHub Issues with screenshots and host details.
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
+
 
 
 

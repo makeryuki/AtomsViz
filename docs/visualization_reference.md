@@ -6,9 +6,14 @@
 | Directional Lobes | Displays speaker coverage lobes as wireframe fans emanating from each loudspeaker. | Good for checking aim of static beds; colours follow band weights. |
 | Layered Lobes | Stacks semi-transparent lobes by frequency band to emphasise Low / Mid / High balances. | Layer opacities reflect current band weight sliders. |
 | Directivity Balloon | Renders a composite balloon around each speaker showing summed energy. | Use draw-scale mode to prevent overlap in dense scenes. |
-| Radiation Heatmap | 3D grid sampling of room energy rendered as coloured quads. | Density slider (levels 1-5) changes sampling resolution; legend shows intensity ramp. |
+| Radiation Heatmap | 3D grid sampling of room energy rendered as coloured quads. | Density slider (levels 1-5) changes sampling resolution; colours follow a blue -> green -> amber -> red ramp. |
 | Temporal Trails | Draws fading paths for moving speakers/objects, colour-coded by band energy. | Trail length derived from `trailBufferCapacity`; decay tuned for ~2 s visibility. |
 
+
+## Visualization Gain
+- Dedicated slider in the header controls lobe/trail reach independently of camera zoom.
+- Range: -50% (smaller glyphs) to +100% (larger glyphs).
+- Works alongside Draw Scale mode; use Zoom for framing and Visualization Gain for density management.
 ## Heatmap Density Mapping
 | Level | Label | Grid (Depth x Width x Height) |
 |-------|-------|--------------------------------|
@@ -18,7 +23,7 @@
 | 4 | High | 11 x 11 x 9 |
 | 5 | Ultra | 13 x 13 x 11 |
 
-## Colour Legend Stops (Heatmap)
+## Heatmap Colour Ramp
 | Position | Colour | Meaning |
 |----------|--------|---------|
 | 0.00 | Blue (#1E3A8A) | Minimum energy |
@@ -26,6 +31,8 @@
 | 0.50 | Green (#22C55E) | Moderate energy |
 | 0.75 | Amber (#F59E0B) | Elevated energy |
 | 1.00 | Red (#F87171) | Peak energy |
+
+*Displayed legend frame has been removed; use this table as reference when interpreting colours.*
 
 ## Band Colour Weights
 - Default slider values: Low 0.33, Mid 0.33, High 0.34.
@@ -52,11 +59,11 @@
 ## Divider & Layout Guidelines
 - Header uses an 8 px spacing increment and adds dividers after heatmap controls and the band weight block.
 - Minimum window width for full header layout: 980 px.
-- Zoom slider label always reads "Zoom (10%-200%)" even when slider mode changes; draw-scale mode updates the tooltip only.
+- Zoom slider label always reads "Zoom (10%-200%)" when in Zoom mode; Draw Scale mode updates the tooltip only. Visualization Gain has its own numeric readout.
 
 ## QA Checklist Snapshot
 1. Confirm all six Inside presets respect minimum zoom limits.
 2. Ensure Outside presets remain orthographic and axis-aligned.
 3. Heatmap density label + slider + value label align right under the View Mode combo (<1 px jitter allowed).
 4. Colour Mix Pad button opens a floating call-out; closing the pad restores keyboard focus to the main editor.
-5. Legend updates when switching modes; Heatmap label reads "Heatmap Intensity".
+5. Visualization Gain slider reacts to preset changes and Draw Scale mode without clipping range.
