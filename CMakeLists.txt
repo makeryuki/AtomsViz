@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_CXX_STANDARD 17)
 
-project(AtmosVizCLAP VERSION 0.3.0)
+project(AtmosVizCLAP VERSION 0.4.0)
 
 set(PATH_TO_JUCE "" CACHE PATH "Path to the JUCE checkout")
 set(PATH_TO_CLAP_EXTENSIONS "${CMAKE_SOURCE_DIR}/external/clap-juce-extensions" CACHE PATH "Path to clap-juce-extensions")
@@ -32,7 +32,7 @@ create_jucer_clap_target(
         BINARY_NAME "AtmosViz"
         MANUFACTURER_NAME "AtmosViz"
         MANUFACTURER_URL "https://github.com/makeryuki/AtomsViz"
-        VERSION_STRING "0.3.0"
+        VERSION_STRING "0.4.0"
         MANUFACTURER_CODE Manu
         PLUGIN_CODE Dnrt
         CLAP_ID "com.atmosviz.plugin"

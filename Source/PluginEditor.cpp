@@ -1572,6 +1572,18 @@ namespace
 
         return { weights.low / total, weights.mid / total, weights.high / total };
     }
+    double visualizationPercentFromAdjustment (double adjustment) noexcept
+    {
+        return juce::jlimit (50.0, 200.0, 100.0 * std::pow (2.0, adjustment / 100.0));
+    }
+
+    double visualizationAdjustmentFromPercent (double percent) noexcept
+    {
+        percent = juce::jlimit (50.0, 200.0, percent);
+        return juce::jlimit (-100.0, 100.0, std::log2 (percent / 100.0) * 100.0);
+    }
+
+
 
     juce::String heatmapDensityLabelText (int level)
     {
@@ -1917,13 +1929,16 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     {
         updateVisualizationSelector();
         updateVisualizationControlsVisibility();
-        updateLegendContent();
     };
 
-    visualizer->onVisualizationScaleChanged = [this] (float value)
+    visualizer->onVisualizationScaleChanged = [this] (float adjustment)
     {
+        const auto percent = visualizationPercentFromAdjustment (adjustment);
+        visualizationGainSlider.setValue (percent, juce::dontSendNotification);
+        updateVisualizationGainValueLabel();
+
         if (sliderControlMode == SliderControlMode::DrawScale)
-            zoomSlider.setValue (value, juce::dontSendNotification);
+            zoomSlider.setValue (adjustment, juce::dontSendNotification);
     };
 
     setupZoomSlider();
@@ -1932,8 +1947,11 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     setupHeatmapDensitySlider();
     setupBandWeightControls();
     setupColourLegend();
+    setupVisualizationGainSlider();
     if (visualizer != nullptr)
         syncBandControlsWithWeights (visualizer->getBandColourWeights());
+    else
+        syncBandControlsWithWeights ({ 1.0f, 1.0f, 1.0f });
 
 
     outsideLabel.setText ("Outside", juce::dontSendNotification);
@@ -1952,7 +1970,7 @@ AtmosVizAudioProcessorEditor::AtmosVizAudioProcessorEditor (AtmosVizAudioProcess
     updateSliderConfiguration();
     updateVisualizationSelector();
     updateVisualizationControlsVisibility();
-    updateLegendContent();
+    updateVisualizationGainValueLabel();
 
     setResizable (true, true);
     setResizeLimits (600, 400, 1600, 1000);
@@ -2218,6 +2236,65 @@ void AtmosVizAudioProcessorEditor::setupColourLegend()
 }
 
 
+void AtmosVizAudioProcessorEditor::setupVisualizationGainSlider()
+{
+    visualizationGainLabel.setText ("Visualization Gain", juce::dontSendNotification);
+    visualizationGainLabel.setJustificationType (juce::Justification::centredRight);
+    visualizationGainLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    visualizationGainLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (visualizationGainLabel);
+
+    visualizationGainValueLabel.setJustificationType (juce::Justification::centredLeft);
+    visualizationGainValueLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    visualizationGainValueLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (visualizationGainValueLabel);
+
+    visualizationGainSlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    visualizationGainSlider.setRange (50.0, 200.0, 1.0);
+    visualizationGainSlider.setDoubleClickReturnValue (true, 100.0);
+    visualizationGainSlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    visualizationGainSlider.setTooltip ("Adjust visualization intensity (50%-200%)");
+    visualizationGainSlider.textFromValueFunction = [] (double value)
+    {
+        return juce::String (juce::roundToInt (value)) + " %";
+    };
+    visualizationGainSlider.valueFromTextFunction = [] (const juce::String& text)
+    {
+        return juce::jlimit (50.0, 200.0, text.upToFirstOccurrenceOf ("%", false, false).getDoubleValue());
+    };
+    visualizationGainSlider.onValueChange = [this]
+    {
+        if (visualizer == nullptr)
+            return;
+
+        const auto percent = visualizationGainSlider.getValue();
+        const auto adjustment = visualizationAdjustmentFromPercent (percent);
+        visualizer->setVisualizationScaleAdjustment ((float) adjustment);
+
+        if (sliderControlMode == SliderControlMode::DrawScale)
+            zoomSlider.setValue (adjustment, juce::dontSendNotification);
+
+        updateVisualizationGainValueLabel();
+    };
+
+    double initialPercent = 100.0;
+    if (visualizer != nullptr)
+        initialPercent = visualizationPercentFromAdjustment (visualizer->getVisualizationScaleAdjustment());
+
+    visualizationGainSlider.setValue (initialPercent, juce::dontSendNotification);
+    updateVisualizationGainValueLabel();
+
+    addAndMakeVisible (visualizationGainSlider);
+}
+
+void AtmosVizAudioProcessorEditor::updateVisualizationGainValueLabel()
+{
+    visualizationGainValueLabel.setText (juce::String (juce::roundToInt (visualizationGainSlider.getValue())) + " %",
+                                         juce::dontSendNotification);
+}
+
+
+
 
 void AtmosVizAudioProcessorEditor::updateSliderConfiguration()
 {
@@ -2269,7 +2346,10 @@ void AtmosVizAudioProcessorEditor::updateSliderConfiguration()
             return juce::jlimit (-100.0, 100.0, std::log2 (factor) * 100.0);
         };
         zoomSlider.setTooltip ("Draw Scale (adjust reach of lobes at full level)");
-        zoomSlider.setValue (visualizer->getVisualizationScaleAdjustment(), juce::dontSendNotification);
+        const auto adjustment = visualizer->getVisualizationScaleAdjustment();
+        zoomSlider.setValue (adjustment, juce::dontSendNotification);
+        visualizationGainSlider.setValue (visualizationPercentFromAdjustment (adjustment), juce::dontSendNotification);
+        updateVisualizationGainValueLabel();
     }
 
     sliderModeCombo.setTooltip (useDrawScale ? "Slider controls Draw Scale (relative reach)" : "Slider controls camera zoom (10%-200%)");
@@ -2319,7 +2399,7 @@ void AtmosVizAudioProcessorEditor::updateLegendContent()
         for (auto position : positions)
             stops.push_back ({ position, visualizer->colourForHeatmapRatio (position) });
 
-        colourLegend.setLegend ("Heatmap Intensity", std::move (stops), "Low", "Medium", "High");
+        colourLegend.setLegend ("", std::move (stops), "Low", "Medium", "High");
         return;
     }
 
@@ -2327,7 +2407,7 @@ void AtmosVizAudioProcessorEditor::updateLegendContent()
     stops.push_back ({ 0.5f, visualizer->colourForBandMix (0.0f, 1.0f, 0.0f) });
     stops.push_back ({ 1.0f, visualizer->colourForBandMix (0.0f, 0.0f, 1.0f) });
 
-    colourLegend.setLegend ("Frequency Emphasis", std::move (stops), "Low", "Mid", "High");
+    colourLegend.setLegend ("", std::move (stops), "Low", "Mid", "High");
 }
 
 void AtmosVizAudioProcessorEditor::applyBandWeightChanges()
@@ -2471,19 +2551,39 @@ void AtmosVizAudioProcessorEditor::updateCameraButtonStates()
 
 void AtmosVizAudioProcessorEditor::sliderValueChanged (juce::Slider* slider)
 {
-    if (slider != &zoomSlider || visualizer == nullptr)
+    if (visualizer == nullptr)
         return;
 
-    if (sliderControlMode == SliderControlMode::Zoom)
+    if (slider == &zoomSlider)
     {
-        visualizer->setZoomFactor ((float) zoomSlider.getValue());
-        updateCameraButtonStates();
+        if (sliderControlMode == SliderControlMode::Zoom)
+        {
+            visualizer->setZoomFactor ((float) zoomSlider.getValue());
+            updateCameraButtonStates();
+        }
+        else
+        {
+            const auto adjustment = (float) zoomSlider.getValue();
+            visualizer->setVisualizationScaleAdjustment (adjustment);
+            visualizationGainSlider.setValue (visualizationPercentFromAdjustment (adjustment), juce::dontSendNotification);
+            updateVisualizationGainValueLabel();
+        }
+        return;
     }
-    else
+
+    if (slider == &visualizationGainSlider)
     {
-        visualizer->setVisualizationScaleAdjustment ((float) zoomSlider.getValue());
+        const auto percent = visualizationGainSlider.getValue();
+        const auto adjustment = visualizationAdjustmentFromPercent (percent);
+        visualizer->setVisualizationScaleAdjustment ((float) adjustment);
+
+        if (sliderControlMode == SliderControlMode::DrawScale)
+            zoomSlider.setValue (adjustment, juce::dontSendNotification);
+
+        updateVisualizationGainValueLabel();
     }
 }
+
 
 void AtmosVizAudioProcessorEditor::paint (juce::Graphics& g)
 {
@@ -2693,7 +2793,6 @@ void AtmosVizAudioProcessorEditor::resized()
 
     headerArea.removeFromTop (juce::roundToInt (3.0f * scale));
 
-    juce::Rectangle<int> legendReference;
 
     const int weightRowHeight = juce::roundToInt (juce::jmax ((float) controlHeight, 28.0f * scale));
     auto weightRow = headerArea.removeFromTop (weightRowHeight);
@@ -2705,7 +2804,6 @@ void AtmosVizAudioProcessorEditor::resized()
     weightArea.removeFromRight (juce::roundToInt (6.0f * scale));
 
     auto sliderArea = weightArea;
-    legendReference = sliderArea;
 
     auto columnSpacing = juce::roundToInt (6.0f * scale);
     auto usableWidth = sliderArea.getWidth() - columnSpacing * 2;
@@ -2747,21 +2845,32 @@ void AtmosVizAudioProcessorEditor::resized()
 
     headerArea.removeFromTop (spacing);
 
-    const int legendRowHeight = juce::roundToInt (juce::jmax ((float) controlHeight, 34.0f * scale));
-    auto legendRow = headerArea.removeFromTop (legendRowHeight);
+    const int gainRowHeight = juce::roundToInt (juce::jmax ((float) controlHeight, 34.0f * scale));
+    auto gainRow = headerArea.removeFromTop (gainRowHeight);
 
-    if (legendReference.isEmpty())
-        legendReference = legendRow;
+    const int gainLabelWidth = juce::roundToInt (juce::jmax (120.0f, 140.0f * scale));
+    const int gainValueWidth = juce::roundToInt (juce::jmax (60.0f, 72.0f * scale));
+    const int gainSliderWidth = juce::jlimit (juce::roundToInt (200.0f * scale),
+                                              juce::roundToInt (320.0f * scale),
+                                              gainRow.getWidth());
 
-    const int legendMinWidth = juce::roundToInt (juce::jmax (160.0f, 180.0f * scale));
-    const int legendMaxWidth = juce::roundToInt (juce::jmax (220.0f, 280.0f * scale));
-    const int legendWidth = juce::jlimit (legendMinWidth, legendMaxWidth, legendReference.getWidth());
-    const int legendRight = juce::jmin (legendReference.getRight(), legendRow.getRight());
-    const int legendLeft = juce::jmax (legendRow.getX(), legendRight - legendWidth);
-    juce::Rectangle<int> legendArea (legendLeft, legendRow.getY(), legendRight - legendLeft, legendRowHeight);
-    colourLegend.setBounds (legendArea.reduced (juce::roundToInt (4.0f * scale), juce::roundToInt (2.0f * scale)));
-    headerBottom = std::max (headerBottom, legendArea.getBottom());
-    addDivider (legendArea.getBottom());
+    auto gainValueArea = gainRow.removeFromRight (gainValueWidth);
+    visualizationGainValueLabel.setBounds (gainValueArea.withHeight (controlHeight));
+
+    gainRow.removeFromRight (spacing);
+    auto gainSliderArea = gainRow.removeFromRight (gainSliderWidth);
+    visualizationGainSlider.setBounds (gainSliderArea.withHeight (controlHeight));
+
+    gainRow.removeFromRight (spacing);
+    auto gainLabelArea = gainRow.removeFromRight (gainLabelWidth);
+    visualizationGainLabel.setBounds (gainLabelArea.withHeight (controlHeight));
+
+    headerBottom = std::max (headerBottom, std::max (gainValueArea.getBottom(), std::max (gainSliderArea.getBottom(), gainLabelArea.getBottom())));
+    addDivider (gainSliderArea.getBottom());
+
+    headerArea.removeFromTop (spacing);
+
+    colourLegend.setBounds ({});
 
     headerArea.removeFromTop (spacing);
     const int textBoxWidth = juce::roundToInt (juce::jlimit (56.0f, 86.0f, 68.0f * scale));
@@ -2772,3 +2881,5 @@ void AtmosVizAudioProcessorEditor::resized()
                                .reduced (juce::roundToInt (16.0f * scale), juce::roundToInt (10.0f * scale));
     visualizer->setBounds (viewerBounds);
 }
+
+

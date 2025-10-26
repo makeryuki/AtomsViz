@@ -329,12 +329,14 @@ private:
     void setupHeatmapDensitySlider();
     void setupBandWeightControls();
     void setupColourLegend();
+    void setupVisualizationGainSlider();
     void setCameraPreset (SpeakerVisualizerComponent::CameraPreset preset);
     void updateCameraButtonStates();
     void updateVisualizationSelector();
     void updateSliderConfiguration();
     void updateVisualizationControlsVisibility();
     void updateHeatmapDensityValueLabel();
+    void updateVisualizationGainValueLabel();
     void updateLegendContent();
 
     void applyBandWeightChanges();
@@ -366,6 +368,7 @@ private:
     juce::Label heatmapDensityLabel;
     juce::Label heatmapDensityValueLabel;
     juce::Label bandWeightTitleLabel;
+    juce::Label visualizationGainLabel;
     juce::Slider lowWeightSlider;
     juce::Slider midWeightSlider;
     juce::Slider highWeightSlider;
@@ -373,6 +376,8 @@ private:
     juce::Label midWeightLabel;
     juce::Label highWeightLabel;
     juce::TextButton colourPadButton;
+    juce::Slider visualizationGainSlider;
+    juce::Label visualizationGainValueLabel;
     std::vector<juce::Rectangle<int>> sectionDividers;
     juce::Slider zoomSlider;
     juce::ComboBox sliderModeCombo;
@@ -387,6 +392,7 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AtmosVizAudioProcessorEditor)
 };
+
 
 
 

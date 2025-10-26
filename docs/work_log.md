@@ -1,5 +1,11 @@
 # AtmosViz Work Log
 
+## 2025-10-27
+- Added Visualization Gain control alongside existing frequency colour legend and rebalanced header layout.
+- Removed legend captions for heatmap/frequency mapping to simplify UI while retaining colour cues.
+- Built Windows Release artefacts (VST3, Standalone, CLAP) and prepared v0.4.0 packaging workflow.
+- Updated clap CMake configuration to version 0.4.0.
+
 ## 2025-10-19
 - Generated macOS Release builds (AU, VST3, Standalone) via Xcode and archived them under `dist/`.- Built macOS CLAP bundle with `/Applications/JUCE` toolchain and added macOS packaging commands.- Expanded README, developer guide, checklist, requirements, and user manual with macOS installation/build notes.
 - Integrated clap-juce-extensions as a submodule and generated a Release CLAP build via CMake.
@@ -31,3 +37,5 @@
 
 ## 2025-09-20
 - Initial design documentation drafted (superseded by current revision).
+
+
