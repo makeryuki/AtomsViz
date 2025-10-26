@@ -20,7 +20,7 @@
 20:      - Source/PluginEditor.cpp
 21:  6. ビルド手順
 22:      1. Visual Studio で Build > Clean Solution → Build > Build Solution。
-23:      2. 出力: C:\Users\capi_\codex\AtmosViz\Builds\VisualStudio2022\x64\Debug\VST3\AtmosViz.vst3\Contents\x86_64-
+23:      2. 出力: C:\Users\user\codex\AtmosViz\Builds\VisualStudio2022\x64\Debug\VST3\AtmosViz.vst3\Contents\x86_64-
 24:  win\AtmosViz.vst3
 25:      3. %COMMONPROGRAMFILES%\VST3 へコピーし、DAW で再スキャン。
 26:

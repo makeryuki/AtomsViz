@@ -38,20 +38,20 @@
         <CONFIGURATION isDebug="0" name="Release" targetName="AtmosViz"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
-        <MODULEPATH id="juce_audio_basics" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_devices" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_formats" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_plugin_client" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_utils" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_core" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_dsp" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_graphics" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="/Users/shimizu/JUCE/modules"/>
-        <MODULEPATH id="juce_opengl" path="/Users/shimizu/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="/Users/Shared/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="/Users/Shared/JUCE/modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
     <VS2022 targetFolder="Builds/VisualStudio2022">
@@ -78,3 +78,4 @@
     </VS2022>
   </EXPORTFORMATS>
 </JUCERPROJECT>
+
