@@ -63,7 +63,7 @@
   - 3: 9x9x7
   - 4: 11x11x9
   - 5: 13x13x11
-- Colours follow a blue �� green �� amber �� red gradient that maps the normalised energy range for the current frame.
+- Colours follow a blue -> green -> amber -> red gradient that maps the normalised energy range for the current frame.
 
 ## 7. Troubleshooting
 | Symptom | Remedy |
@@ -82,6 +82,8 @@
 - Revisit Inside Top orientation (front wall alignment).
 - Automate visual regression via scripted camera sweeps.
 - Add optional 3D asset overlay for room treatment cues.
+
+
 
 
 

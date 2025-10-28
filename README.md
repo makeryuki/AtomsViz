@@ -10,8 +10,8 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
   - Inside presets lock the camera to the listening position, enforcing minimum zooms (40% for Home/User/Front/Back/Left/Right, 25% for Top) so the room never collapses.
   - Outside presets keep an orthographic cube to inspect speaker placement without perspective distortion.
 - **Radiation Heatmap toolkit**
-  - Density slider (Coarse to Ultra) reshapes the sampling grid from 5�~5�~3 up to 13�~13�~11 cells.
-  - Colours follow a blue �� green �� amber �� red ramp that mirrors the per-frame energy range (see `docs/visualization_reference.md`).
+  - Density slider (Coarse to Ultra) reshapes the sampling grid from 5x5x3 up to 13x13x11 cells.
+  - Colours follow a blue -> green -> amber -> red ramp that mirrors the per-frame energy range (see `docs/visualization_reference.md`).
   - Energy smoothing retains responsiveness while avoiding frame-to-frame flicker in quiet passages.
 - **Colour mixing & scaling controls**
   - Low/Mid/High sliders expose precise weighting for frequency emphasis.
@@ -116,6 +116,8 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
+
+
 
 
 
