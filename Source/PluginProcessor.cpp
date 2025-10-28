@@ -104,24 +104,31 @@ void AtmosVizAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     const auto numSamples = buffer.getNumSamples();
     const auto numChannels = std::min<int>(buffer.getNumChannels(), (int)kNumAtmosSpeakers);
 
+    const auto& layout = getBusesLayout().getMainInputChannelSet();
+
     SpeakerMetricsArray metrics{};
     for (int ch = 0; ch < numChannels; ++ch)
     {
-        const auto* channelData = buffer.getReadPointer(ch);
+        const auto channelType = layout.getTypeOfChannel (ch);
+        const auto defIndex = findDefinitionIndexForChannel (channelType);
+        if (defIndex < 0)
+            continue;
 
-        auto& entry = metrics[(size_t)ch];
-        entry.rms = computeRms(channelData, numSamples);
-        entry.peak = computePeak(channelData, numSamples);
-        entry.bands = analyseFrequencyContent(channelData, numSamples);
+        const auto* channelData = buffer.getReadPointer (ch);
 
-        if (speakerDefinitions[(size_t)ch].isLfe)
+        auto& entry = metrics[(size_t) defIndex];
+        entry.rms = computeRms (channelData, numSamples);
+        entry.peak = computePeak (channelData, numSamples);
+        entry.bands = analyseFrequencyContent (channelData, numSamples);
+
+        if (speakerDefinitions[(size_t) defIndex].isLfe)
         {
             entry.bands.mid = 0.0f;
             entry.bands.high = 0.0f;
         }
     }
 
-    const juce::SpinLock::ScopedLockType lock(metricsLock);
+    const juce::SpinLock::ScopedLockType lock (metricsLock);
     latestMetrics = metrics;
 }
 
@@ -215,22 +222,22 @@ AtmosVizAudioProcessor::FrequencyBands AtmosVizAudioProcessor::analyseFrequencyC
 
 AtmosVizAudioProcessor::SpeakerDefinitions AtmosVizAudioProcessor::buildSpeakerDefinitions()
 {
-    struct Seed { const char* id; const char* name; float azimuth; float elevation; bool isLfe; };
+    struct Seed { juce::AudioChannelSet::ChannelType type; const char* id; const char* name; float azimuth; float elevation; bool isLfe; };
 
     static constexpr Seed seeds[kNumAtmosSpeakers] =
     {
-        { "L",   "Left",             -30.0f,   0.0f, false },
-        { "R",   "Right",             30.0f,   0.0f, false },
-        { "C",   "Centre",             0.0f,   0.0f, false },
-        { "LFE", "LFE",                0.0f, -30.0f, true  },
-        { "Ls",  "Surround L",      -110.0f,   0.0f, false },
-        { "Rs",  "Surround R",       110.0f,   0.0f, false },
-        { "Lrs", "Rear Surround L", -150.0f,   0.0f, false },
-        { "Rrs", "Rear Surround R",  150.0f,   0.0f, false },
-        { "Ltf", "Top Front L",      -45.0f,  45.0f, false },
-        { "Rtf", "Top Front R",       45.0f,  45.0f, false },
-        { "Ltr", "Top Rear L",      -135.0f,  45.0f, false },
-        { "Rtr", "Top Rear R",       135.0f,  45.0f, false }
+        { juce::AudioChannelSet::left,            "L",   "Left",             -30.0f,   0.0f, false },
+        { juce::AudioChannelSet::right,           "R",   "Right",             30.0f,   0.0f, false },
+        { juce::AudioChannelSet::centre,          "C",   "Centre",             0.0f,   0.0f, false },
+        { juce::AudioChannelSet::LFE,             "LFE", "LFE",                0.0f, -30.0f, true  },
+        { juce::AudioChannelSet::leftSurround,    "Ls",  "Surround L",      -110.0f,   0.0f, false },
+        { juce::AudioChannelSet::rightSurround,   "Rs",  "Surround R",       110.0f,   0.0f, false },
+        { juce::AudioChannelSet::leftSurroundRear,  "Lrs", "Rear Surround L", -150.0f,   0.0f, false },
+        { juce::AudioChannelSet::rightSurroundRear, "Rrs", "Rear Surround R",  150.0f,   0.0f, false },
+        { juce::AudioChannelSet::topFrontLeft,    "Ltf", "Top Front L",      -45.0f,  45.0f, false },
+        { juce::AudioChannelSet::topFrontRight,   "Rtf", "Top Front R",       45.0f,  45.0f, false },
+        { juce::AudioChannelSet::topRearLeft,     "Ltr", "Top Rear L",      -135.0f,  45.0f, false },
+        { juce::AudioChannelSet::topRearRight,    "Rtr", "Top Rear R",       135.0f,  45.0f, false }
     };
 
     SpeakerDefinitions defs{};
@@ -256,11 +263,23 @@ AtmosVizAudioProcessor::SpeakerDefinitions AtmosVizAudioProcessor::buildSpeakerD
             position.length(),
             seed.isLfe,
             position,
-            aim
+            aim,
+            seed.type
         };
     }
 
     return defs;
+}
+
+int AtmosVizAudioProcessor::findDefinitionIndexForChannel(juce::AudioChannelSet::ChannelType type) const noexcept
+{
+    for (size_t i = 0; i < speakerDefinitions.size(); ++i)
+    {
+        if (speakerDefinitions[i].channelType == type)
+            return static_cast<int>(i);
+    }
+
+    return -1;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

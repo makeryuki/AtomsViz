@@ -27,6 +27,7 @@ public:
         bool isLfe;
         juce::Vector3D<float> position;
         juce::Vector3D<float> aimDirection;
+        juce::AudioChannelSet::ChannelType channelType{};
     };
 
     struct SpeakerMetrics
@@ -88,6 +89,7 @@ private:
     float computePeak(const float* data, int numSamples) const noexcept;
     FrequencyBands analyseFrequencyContent(const float* data, int numSamples) noexcept;
     static SpeakerDefinitions buildSpeakerDefinitions();
+    int findDefinitionIndexForChannel(juce::AudioChannelSet::ChannelType type) const noexcept;
 
     static const SpeakerDefinitions speakerDefinitions;
     static const RoomDimensions defaultRoom;

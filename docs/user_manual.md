@@ -4,14 +4,14 @@
 
 ## 1. Installation
 **Windows (VST3 + Standalone)**
-1. Download `dist/AtmosViz_v0.4.0_Windows_VST3.zip`.
+1. Download `dist/AtmosViz_v0.5.0_Windows_VST3.zip`.
 2. Extract; you will get `AtmosViz.vst3` (bundle folder).
 3. Copy the bundle into `C:\Program Files\Common Files\VST3\`.
 4. Launch your DAW and rescan plug-ins (most hosts list AtmosViz under *Effects*).
-5. Extract `dist/AtmosViz_v0.4.0_Windows_Standalone.zip` and run `AtmosViz.exe` for the standalone tool.
+5. Extract `dist/AtmosViz_v0.5.0_Windows_Standalone.zip` and run `AtmosViz.exe` for the standalone tool.
 
 **macOS (AU / VST3 / Standalone / CLAP)**
-1. Download the macOS release zips currently published (`dist/AtmosViz_v0.4.0_macOS_AU.zip`, `dist/AtmosViz_v0.4.0_macOS_VST3.zip`, `dist/AtmosViz_v0.4.0_macOS_Standalone.zip`) and/or the CLAP bundle (`dist/AtmosViz_v0.4.0_macOS_CLAP.clap`).
+1. Download the macOS release zips currently published (`dist/AtmosViz_v0.5.0_macOS_AU.zip`, `dist/AtmosViz_v0.5.0_macOS_VST3.zip`, `dist/AtmosViz_v0.5.0_macOS_Standalone.zip`) and/or the CLAP bundle (`dist/AtmosViz_v0.5.0_macOS_CLAP.clap`).
 2. Extract the relevant archive(s). Each plug-in is a bundle (`AtmosViz.component`, `AtmosViz.vst3`, `AtmosViz.clap`).
 3. Copy bundles to the standard system locations:
    - AU: `/Library/Audio/Plug-Ins/Components/`
@@ -82,6 +82,7 @@
 - Revisit Inside Top orientation (front wall alignment).
 - Automate visual regression via scripted camera sweeps.
 - Add optional 3D asset overlay for room treatment cues.
+
 
 
 

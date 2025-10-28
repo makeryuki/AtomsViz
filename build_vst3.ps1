@@ -46,7 +46,11 @@ Copy-Item -Path $dllPath -Destination (Join-Path $binaryDir 'AtmosViz.vst3') -Fo
 
 $moduleInfoSource = Get-ChildItem -Path $buildRoot -Filter 'moduleinfo.json' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($moduleInfoSource) {
-    Copy-Item -Path $moduleInfoSource.FullName -Destination (Join-Path $resourceDir 'moduleinfo.json') -Force
+    $targetModulePath = Join-Path $resourceDir 'moduleinfo.json'
+    if ($moduleInfoSource.FullName -ne $targetModulePath) {
+        Copy-Item -Path $moduleInfoSource.FullName -Destination $targetModulePath -Force
+    }
 }
 
 Write-Host "Created bundle: $bundleRoot"
+

@@ -1,5 +1,11 @@
 # AtmosViz Work Log
 
+## 2025-10-28
+- Fixed 7.1.4 channel mapping by binding metrics to JUCE channel types (L/R swaps eliminated).
+- Bumped version metadata to 0.5.0 and refreshed README/user manual references.
+- Rebuilt Windows Release artefacts (VST3, Standalone, CLAP) and prepared packaging for GitHub release v0.5.0.
+- Coordinated macOS release hand-off instructions for cross-platform artefact parity.
+
 ## 2025-10-27
 - Added Visualization Gain control alongside existing frequency colour legend and rebalanced header layout.
 - Removed legend captions for heatmap/frequency mapping to simplify UI while retaining colour cues.
