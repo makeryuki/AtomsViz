@@ -24,5 +24,5 @@
 - Documentation refresh (README / user_manual / requirements).
 
 ## Progress (2025-10-29)
-- Completed Phase 1 (dynamic containers) and added automatic detection for 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6.
-- Next steps: tune wide/top-side positioning for 9.x and support discrete/custom layouts.
+- Completed Phase 1 (dynamic containers) and added automatic detection for 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6.
+- Next steps: support discrete/custom layouts and visual tuning for additional wides/height variants.

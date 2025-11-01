@@ -129,14 +129,22 @@ bool AtmosVizAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) 
     const auto inputSet  = layouts.getMainInputChannelSet();
     const auto outputSet = layouts.getMainOutputChannelSet();
 
-    static const std::array<juce::AudioChannelSet, 6> supportedSets
+    static const std::array<juce::AudioChannelSet, 14> supportedSets
     {
         juce::AudioChannelSet::create5point1(),
         juce::AudioChannelSet::create5point1point2(),
         juce::AudioChannelSet::create5point1point4(),
         juce::AudioChannelSet::create7point1point2(),
         juce::AudioChannelSet::create7point1point4(),
-        juce::AudioChannelSet::create7point1point6()
+        juce::AudioChannelSet::create7point1point6(),
+        juce::AudioChannelSet::create9point0point4(),
+        juce::AudioChannelSet::create9point1point4(),
+        juce::AudioChannelSet::create9point0point6(),
+        juce::AudioChannelSet::create9point1point6(),
+        juce::AudioChannelSet::create9point0point4ITU(),
+        juce::AudioChannelSet::create9point1point4ITU(),
+        juce::AudioChannelSet::create9point0point6ITU(),
+        juce::AudioChannelSet::create9point1point6ITU()
     };
 
     for (const auto& set : supportedSets)
