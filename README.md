@@ -34,13 +34,13 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 - `JuceLibraryCode/` - auto-generated JUCE wrappers.
 - `Builds/VisualStudio2022/` - generated Visual Studio projects (VST3, Standalone, helper).
 - `Builds/MacOSX/` - generated Xcode projects and build artefacts (AU, VST3, Standalone).
-- `dist/AtmosViz_v0.5.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
-- `dist/AtmosViz_v0.5.0_Windows_Standalone.zip` - portable standalone executable.
-- `dist/AtmosViz_v0.5.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
-- `dist/AtmosViz_v0.5.0_macOS_VST3.zip` - macOS VST3 bundle (latest published macOS build).
-- `dist/AtmosViz_v0.5.0_macOS_AU.zip` - macOS Audio Unit component.
-- `dist/AtmosViz_v0.5.0_macOS_Standalone.zip` - macOS standalone `.app` bundle.
-- `dist/AtmosViz_v0.5.0_macOS_CLAP.clap` - macOS CLAP plug-in bundle.
+- `dist/AtmosViz_v0.6.0_Windows_VST3.zip` - VST3 bundle ready for distribution.
+- `dist/AtmosViz_v0.6.0_Windows_Standalone.zip` - portable standalone executable.
+- `dist/AtmosViz_v0.6.0_Windows_CLAP.clap` - CLAP plug-in built via clap-juce-extensions.
+- `dist/AtmosViz_v0.6.0_macOS_VST3.zip` - macOS VST3 bundle (latest published macOS build).
+- `dist/AtmosViz_v0.6.0_macOS_AU.zip` - macOS Audio Unit component.
+- `dist/AtmosViz_v0.6.0_macOS_Standalone.zip` - macOS standalone `.app` bundle.
+- `dist/AtmosViz_v0.6.0_macOS_CLAP.clap` - macOS CLAP plug-in bundle.
 - `docs/` - up-to-date design notes and user/developer documentation (see below).
 
 ## Building
@@ -80,18 +80,18 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
    The finished bundle is at `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`.
 
 ## Installing the Plug-in
-- **Windows (VST3):** copy `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.5.0_Windows_VST3.zip`) into `C:\Program Files\Common Files\VST3`.
-- **macOS (VST3):** copy `Builds/MacOSX/build/Release/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.5.0_macOS_VST3.zip`) into `/Library/Audio/Plug-Ins/VST3/`.
-- **macOS (AU):** copy `Builds/MacOSX/build/Release/AtmosViz.component` (or unzip `dist/AtmosViz_v0.5.0_macOS_AU.zip`) into `/Library/Audio/Plug-Ins/Components/`.
+- **Windows (VST3):** copy `Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.6.0_Windows_VST3.zip`) into `C:\Program Files\Common Files\VST3`.
+- **macOS (VST3):** copy `Builds/MacOSX/build/Release/AtmosViz.vst3` (or unzip `dist/AtmosViz_v0.6.0_macOS_VST3.zip`) into `/Library/Audio/Plug-Ins/VST3/`.
+- **macOS (AU):** copy `Builds/MacOSX/build/Release/AtmosViz.component` (or unzip `dist/AtmosViz_v0.6.0_macOS_AU.zip`) into `/Library/Audio/Plug-Ins/Components/`.
 - Re-scan plug-ins in the host DAW after copying.
 
 ## Running the Standalone
-- **Windows:** extract `dist/AtmosViz_v0.5.0_Windows_Standalone.zip` and run `AtmosViz.exe`.
-- **macOS:** unzip `dist/AtmosViz_v0.5.0_macOS_Standalone.zip`, drag `AtmosViz.app` to `/Applications` (or run in-place), then launch via Finder. macOS Gatekeeper may prompt on first launch.
+- **Windows:** extract `dist/AtmosViz_v0.6.0_Windows_Standalone.zip` and run `AtmosViz.exe`.
+- **macOS:** unzip `dist/AtmosViz_v0.6.0_macOS_Standalone.zip`, drag `AtmosViz.app` to `/Applications` (or run in-place), then launch via Finder. macOS Gatekeeper may prompt on first launch.
 
 ## Installing the CLAP Plug-in
-- **Windows:** copy `dist/AtmosViz_v0.5.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
-- **macOS:** copy `dist/AtmosViz_v0.5.0_macOS_CLAP.clap` (or `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`) into `/Library/Audio/Plug-Ins/CLAP/`.
+- **Windows:** copy `dist/AtmosViz_v0.6.0_Windows_CLAP.clap` (or the `build-clap` artefact) into `C:/Program Files/Common Files/CLAP`.
+- **macOS:** copy `dist/AtmosViz_v0.6.0_macOS_CLAP.clap` (or `build-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap`) into `/Library/Audio/Plug-Ins/CLAP/`.
 - If your host scans custom folders, place the `.clap` bundle in the appropriate directory and trigger a plug-in rescan.
 
 ## Documentation

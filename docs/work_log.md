@@ -1,5 +1,11 @@
 # AtmosViz Work Log
 
+## 2025-11-01
+- Released v0.6.0 (mono/stereo through Dolby Atmos 9.x) and generated distribution bundles for all Windows formats.
+- Updated documentation to reflect comprehensive JUCE layout support and refreshed version numbers.
+- Coordinated packaging workflow for upcoming macOS artefacts (see release checklist).
+
+
 ## 2025-10-28
 - Fixed 7.1.4 channel mapping by binding metrics to JUCE channel types (L/R swaps eliminated).
 - Bumped version metadata to 0.5.0 and refreshed README/user manual references.
