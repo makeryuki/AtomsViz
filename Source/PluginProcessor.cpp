@@ -63,10 +63,10 @@ namespace
         { juce::AudioChannelSet::leftCentre,       "Lc",  "Left Centre",      -15.0f,  0.0f, false },
         { juce::AudioChannelSet::rightCentre,      "Rc",  "Right Centre",      15.0f,  0.0f, false },
         { juce::AudioChannelSet::LFE,              "LFE", "LFE",                0.0f, -30.0f, true  },
-        { juce::AudioChannelSet::leftSurround,     "Ls",  "Surround L",      -100.0f,  0.0f, false },
-        { juce::AudioChannelSet::rightSurround,    "Rs",  "Surround R",       100.0f,  0.0f, false },
-        { juce::AudioChannelSet::leftSurroundSide, "Ls",  "Surround L",      -110.0f,  0.0f, false },
-        { juce::AudioChannelSet::rightSurroundSide,"Rs",  "Surround R",       110.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftSurround,     "Ls",   "Surround L",      -100.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurround,    "Rs",   "Surround R",       100.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftSurroundSide, "Lss", "Side Surround L",  -110.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurroundSide,"Rss", "Side Surround R",   110.0f,  0.0f, false },
         { juce::AudioChannelSet::leftSurroundRear, "Lrs", "Rear Surround L", -150.0f,  0.0f, false },
         { juce::AudioChannelSet::rightSurroundRear,"Rrs", "Rear Surround R",  150.0f,  0.0f, false },
         { juce::AudioChannelSet::wideLeft,         "Lw",  "Wide Left",        -55.0f,  0.0f, false },
@@ -129,8 +129,11 @@ bool AtmosVizAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) 
     const auto inputSet  = layouts.getMainInputChannelSet();
     const auto outputSet = layouts.getMainOutputChannelSet();
 
-    static const std::array<juce::AudioChannelSet, 3> supportedSets
+    static const std::array<juce::AudioChannelSet, 6> supportedSets
     {
+        juce::AudioChannelSet::create5point1(),
+        juce::AudioChannelSet::create5point1point2(),
+        juce::AudioChannelSet::create5point1point4(),
         juce::AudioChannelSet::create7point1point2(),
         juce::AudioChannelSet::create7point1point4(),
         juce::AudioChannelSet::create7point1point6()
