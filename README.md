@@ -2,7 +2,7 @@
 
 AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. It renders speaker activity and heatmap energy distributions in both interior and exterior perspectives, exposing fine-grained UI controls for engineers who need to monitor immersive mixes.
 
-**Limitation:** AtmosViz currently supports Dolby Atmos 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6 channel layouts. Other bus configurations are not yet supported.
+**Limitation:** AtmosViz currently supports JUCE standard layouts from mono/stereo up through Dolby Atmos 9.1.6 (Atmos/ITU variants). Other bus configurations are not yet supported.
 
 ## Highlights
 - **Inside / Outside perspective suite**
@@ -23,7 +23,7 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
   - Optional draw-scale mode adjusts glyph size independently from zoom to keep dense scenes readable.
 - **Channel mapping safeguards**
   - Uses JUCE channel-type metadata to pin each meter to the correct speaker.
-  - Automatically adapts to Dolby Atmos 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6 bus layouts and redraws the stage accordingly.
+  - Automatically adapts to JUCE speaker layouts (mono, stereo, quad, 5.x, 6.x, 7.x SDDS/Atmos, 9.x Atmos/ITU) and redraws the stage accordingly.
   - Unknown channels are ignored gracefully so visuals never drift when extra stems are present.
 - **Automation and host integration**
   - All major controls are backed by `AudioProcessorValueTreeState` parameters for DAW automation and recall.

@@ -14,7 +14,7 @@
 | FR-09 | Document build, usage, and release processes in the repository. | Done |
 | FR-10 | Produce a CLAP plug-in using clap-juce-extensions and ship it alongside other artifacts. | Done |
 | FR-11 | Publish macOS AU, VST3, Standalone, and CLAP bundles equivalent to Windows deliverables. | Done |
-| FR-12 | Support Dolby Atmos 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6 layouts (auto-detect via JUCE bus configuration). | Done |
+| FR-12 | Support JUCE standard layouts from mono/stereo through Dolby Atmos 9.1.6 (Atmos/ITU variants) via auto-detected bus configuration. | Done |
 
 ## Non-Functional Requirements
 | ID | Description | Status |

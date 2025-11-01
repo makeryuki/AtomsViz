@@ -48,5 +48,5 @@
 
 ## 2025-10-29
 - Documented the channel-layout expansion roadmap in `docs/channel_layout_expansion.md`.
-- Refactored the AudioProcessor/Visualizer to handle dynamic speaker counts and auto-detect 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6 layouts.
+- Refactored the AudioProcessor/Visualizer to handle dynamic speaker counts and auto-detect JUCE layouts from mono/stereo up to Dolby Atmos 9.1.6 (Atmos/ITU variants).
 - Refreshed README, user_manual, and requirements to describe the expanded layout support.

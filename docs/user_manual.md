@@ -1,6 +1,6 @@
 # AtmosViz User Manual
 
-**Limitation:** AtmosViz currently supports Dolby Atmos 5.1 / 5.1.2 / 5.1.4 / 7.1.2 / 7.1.4 / 7.1.6 / 9.0.4 / 9.1.4 / 9.0.6 / 9.1.6 channel layouts. Other bus configurations are not yet supported.
+**Limitation:** AtmosViz currently supports JUCE standard layouts from mono/stereo up through Dolby Atmos 9.1.6 (Atmos/ITU variants). Other bus configurations are not yet supported.
 
 ## 1. Installation
 **Windows (VST3 + Standalone)**

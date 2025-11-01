@@ -55,16 +55,18 @@ namespace
         bool isLfe;
     };
 
-    static constexpr SpeakerSeed speakerSeedTable[] =
+        static constexpr SpeakerSeed speakerSeedTable[] =
     {
         { juce::AudioChannelSet::left,             "L",   "Left",             -30.0f,  0.0f, false },
         { juce::AudioChannelSet::right,            "R",   "Right",             30.0f,  0.0f, false },
         { juce::AudioChannelSet::centre,           "C",   "Centre",             0.0f,  0.0f, false },
         { juce::AudioChannelSet::leftCentre,       "Lc",  "Left Centre",      -15.0f,  0.0f, false },
         { juce::AudioChannelSet::rightCentre,      "Rc",  "Right Centre",      15.0f,  0.0f, false },
+        { juce::AudioChannelSet::surround,         "S",   "Surround",         180.0f,  0.0f, false },
+        { juce::AudioChannelSet::centreSurround,   "Cs",  "Centre Surround",  180.0f,  0.0f, false },
         { juce::AudioChannelSet::LFE,              "LFE", "LFE",                0.0f, -30.0f, true  },
-        { juce::AudioChannelSet::leftSurround,     "Ls",   "Surround L",      -100.0f,  0.0f, false },
-        { juce::AudioChannelSet::rightSurround,    "Rs",   "Surround R",       100.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftSurround,     "Ls",  "Surround L",      -100.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurround,    "Rs",  "Surround R",       100.0f,  0.0f, false },
         { juce::AudioChannelSet::leftSurroundSide, "Lss", "Side Surround L",  -110.0f,  0.0f, false },
         { juce::AudioChannelSet::rightSurroundSide,"Rss", "Side Surround R",   110.0f,  0.0f, false },
         { juce::AudioChannelSet::leftSurroundRear, "Lrs", "Rear Surround L", -150.0f,  0.0f, false },
@@ -129,11 +131,34 @@ bool AtmosVizAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) 
     const auto inputSet  = layouts.getMainInputChannelSet();
     const auto outputSet = layouts.getMainOutputChannelSet();
 
-    static const std::array<juce::AudioChannelSet, 14> supportedSets
+    static const juce::AudioChannelSet supportedSets[] =
     {
+        juce::AudioChannelSet::mono(),
+        juce::AudioChannelSet::stereo(),
+        juce::AudioChannelSet::createLCR(),
+        juce::AudioChannelSet::createLRS(),
+        juce::AudioChannelSet::createLCRS(),
+        juce::AudioChannelSet::quadraphonic(),
+        juce::AudioChannelSet::pentagonal(),
+        juce::AudioChannelSet::hexagonal(),
+        juce::AudioChannelSet::octagonal(),
+        juce::AudioChannelSet::create5point0(),
+        juce::AudioChannelSet::create5point0point2(),
+        juce::AudioChannelSet::create5point0point4(),
         juce::AudioChannelSet::create5point1(),
         juce::AudioChannelSet::create5point1point2(),
         juce::AudioChannelSet::create5point1point4(),
+        juce::AudioChannelSet::create6point0(),
+        juce::AudioChannelSet::create6point0Music(),
+        juce::AudioChannelSet::create6point1(),
+        juce::AudioChannelSet::create6point1Music(),
+        juce::AudioChannelSet::create7point0(),
+        juce::AudioChannelSet::create7point0SDDS(),
+        juce::AudioChannelSet::create7point0point2(),
+        juce::AudioChannelSet::create7point0point4(),
+        juce::AudioChannelSet::create7point0point6(),
+        juce::AudioChannelSet::create7point1(),
+        juce::AudioChannelSet::create7point1SDDS(),
         juce::AudioChannelSet::create7point1point2(),
         juce::AudioChannelSet::create7point1point4(),
         juce::AudioChannelSet::create7point1point6(),
