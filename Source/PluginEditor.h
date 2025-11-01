@@ -165,6 +165,7 @@ private:
 
     void timerCallback() override;
     void refreshMetrics();
+    void syncSpeakersWithDefinitions();
     void updateProjections();
     void applyOrbit (DisplaySpeaker& speaker) const;
     void drawRoom (juce::Graphics& g);

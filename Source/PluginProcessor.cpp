@@ -1,5 +1,7 @@
 #include <cmath>
 #include <algorithm>
+#include <array>
+#include <utility>
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
@@ -43,13 +45,46 @@ namespace
             : juce::jlimit(-floor, 0.0f, unit.y * floor);
 
         return { x, y, z };
-    }
+    }    struct SpeakerSeed
+    {
+        juce::AudioChannelSet::ChannelType type;
+        const char* id;
+        const char* displayName;
+        float azimuthDegrees;
+        float elevationDegrees;
+        bool isLfe;
+    };
+
+    static constexpr SpeakerSeed speakerSeedTable[] =
+    {
+        { juce::AudioChannelSet::left,             "L",   "Left",             -30.0f,  0.0f, false },
+        { juce::AudioChannelSet::right,            "R",   "Right",             30.0f,  0.0f, false },
+        { juce::AudioChannelSet::centre,           "C",   "Centre",             0.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftCentre,       "Lc",  "Left Centre",      -15.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightCentre,      "Rc",  "Right Centre",      15.0f,  0.0f, false },
+        { juce::AudioChannelSet::LFE,              "LFE", "LFE",                0.0f, -30.0f, true  },
+        { juce::AudioChannelSet::leftSurround,     "Ls",  "Surround L",      -100.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurround,    "Rs",  "Surround R",       100.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftSurroundSide, "Ls",  "Surround L",      -110.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurroundSide,"Rs",  "Surround R",       110.0f,  0.0f, false },
+        { juce::AudioChannelSet::leftSurroundRear, "Lrs", "Rear Surround L", -150.0f,  0.0f, false },
+        { juce::AudioChannelSet::rightSurroundRear,"Rrs", "Rear Surround R",  150.0f,  0.0f, false },
+        { juce::AudioChannelSet::wideLeft,         "Lw",  "Wide Left",        -55.0f,  0.0f, false },
+        { juce::AudioChannelSet::wideRight,        "Rw",  "Wide Right",        55.0f,  0.0f, false },
+        { juce::AudioChannelSet::topFrontLeft,     "Ltf", "Top Front L",      -45.0f, 50.0f, false },
+        { juce::AudioChannelSet::topFrontRight,    "Rtf", "Top Front R",       45.0f, 50.0f, false },
+        { juce::AudioChannelSet::topFrontCentre,   "Tfc", "Top Front C",        0.0f, 55.0f, false },
+        { juce::AudioChannelSet::topSideLeft,      "Lts", "Top Side L",       -90.0f, 65.0f, false },
+        { juce::AudioChannelSet::topSideRight,     "Rts", "Top Side R",        90.0f, 65.0f, false },
+        { juce::AudioChannelSet::topRearLeft,      "Ltr", "Top Rear L",      -135.0f, 50.0f, false },
+        { juce::AudioChannelSet::topRearRight,     "Rtr", "Top Rear R",       135.0f, 50.0f, false },
+        { juce::AudioChannelSet::topRearCentre,    "Trc", "Top Rear C",       180.0f, 55.0f, false }
+    };
+
+
 }
 
 const AtmosVizAudioProcessor::RoomDimensions AtmosVizAudioProcessor::defaultRoom{ 6.4f, 3.05f, 7.6f, 1.2f };
-const AtmosVizAudioProcessor::SpeakerDefinitions AtmosVizAudioProcessor::speakerDefinitions =
-AtmosVizAudioProcessor::buildSpeakerDefinitions();
-
 AtmosVizAudioProcessor::AtmosVizAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
     : AudioProcessor(BusesProperties()
@@ -58,6 +93,7 @@ AtmosVizAudioProcessor::AtmosVizAudioProcessor()
 #endif
 {
     fftBuffer.allocate(2 * fftSize, true);
+    rebuildSpeakerLayout();
 }
 
 AtmosVizAudioProcessor::~AtmosVizAudioProcessor() = default;
@@ -77,6 +113,7 @@ void AtmosVizAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     currentSampleRate = sampleRate;
     updateBandSplit();
+    rebuildSpeakerLayout();
     juce::FloatVectorOperations::clear(fftBuffer.get(), 2 * fftSize);
 }
 
@@ -89,9 +126,23 @@ bool AtmosVizAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) 
     juce::ignoreUnused(layouts);
     return true;
 #else
-    const auto targetSet = juce::AudioChannelSet::create7point1point4();
-    return layouts.getMainInputChannelSet() == targetSet
-        && layouts.getMainOutputChannelSet() == targetSet;
+    const auto inputSet  = layouts.getMainInputChannelSet();
+    const auto outputSet = layouts.getMainOutputChannelSet();
+
+    static const std::array<juce::AudioChannelSet, 3> supportedSets
+    {
+        juce::AudioChannelSet::create7point1point2(),
+        juce::AudioChannelSet::create7point1point4(),
+        juce::AudioChannelSet::create7point1point6()
+    };
+
+    for (const auto& set : supportedSets)
+    {
+        if (inputSet == set && outputSet == set)
+            return true;
+    }
+
+    return false;
 #endif
 }
 #endif
@@ -102,16 +153,28 @@ void AtmosVizAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     juce::ignoreUnused(midiMessages);
 
     const auto numSamples = buffer.getNumSamples();
-    const auto numChannels = std::min<int>(buffer.getNumChannels(), (int)kNumAtmosSpeakers);
+    const auto numChannels = buffer.getNumChannels();
 
     const auto& layout = getBusesLayout().getMainInputChannelSet();
 
-    SpeakerMetricsArray metrics{};
+    if (speakerDefinitions.size() != static_cast<size_t> (layout.size()))
+        rebuildSpeakerLayout();
+
+    SpeakerMetricsArray metrics;
+    metrics.resize(speakerDefinitions.size());
+
+    if (metrics.empty())
+    {
+        const juce::SpinLock::ScopedLockType lock (metricsLock);
+        latestMetrics.clear();
+        return;
+    }
+
     for (int ch = 0; ch < numChannels; ++ch)
     {
         const auto channelType = layout.getTypeOfChannel (ch);
         const auto defIndex = findDefinitionIndexForChannel (channelType);
-        if (defIndex < 0)
+        if (defIndex < 0 || static_cast<size_t> (defIndex) >= metrics.size())
             continue;
 
         const auto* channelData = buffer.getReadPointer (ch);
@@ -220,57 +283,80 @@ AtmosVizAudioProcessor::FrequencyBands AtmosVizAudioProcessor::analyseFrequencyC
     return bands;
 }
 
-AtmosVizAudioProcessor::SpeakerDefinitions AtmosVizAudioProcessor::buildSpeakerDefinitions()
+AtmosVizAudioProcessor::SpeakerDefinitions AtmosVizAudioProcessor::buildSpeakerDefinitions (const juce::AudioChannelSet& layout) const
 {
-    struct Seed { juce::AudioChannelSet::ChannelType type; const char* id; const char* name; float azimuth; float elevation; bool isLfe; };
+    SpeakerDefinitions defs;
+    defs.reserve (layout.size());
 
-    static constexpr Seed seeds[kNumAtmosSpeakers] =
+    auto findSeed = [] (juce::AudioChannelSet::ChannelType type) -> const SpeakerSeed*
     {
-        { juce::AudioChannelSet::left,            "L",   "Left",             -30.0f,   0.0f, false },
-        { juce::AudioChannelSet::right,           "R",   "Right",             30.0f,   0.0f, false },
-        { juce::AudioChannelSet::centre,          "C",   "Centre",             0.0f,   0.0f, false },
-        { juce::AudioChannelSet::LFE,             "LFE", "LFE",                0.0f, -30.0f, true  },
-        { juce::AudioChannelSet::leftSurround,    "Ls",  "Surround L",      -110.0f,   0.0f, false },
-        { juce::AudioChannelSet::rightSurround,   "Rs",  "Surround R",       110.0f,   0.0f, false },
-        { juce::AudioChannelSet::leftSurroundRear,  "Lrs", "Rear Surround L", -150.0f,   0.0f, false },
-        { juce::AudioChannelSet::rightSurroundRear, "Rrs", "Rear Surround R",  150.0f,   0.0f, false },
-        { juce::AudioChannelSet::topFrontLeft,    "Ltf", "Top Front L",      -45.0f,  45.0f, false },
-        { juce::AudioChannelSet::topFrontRight,   "Rtf", "Top Front R",       45.0f,  45.0f, false },
-        { juce::AudioChannelSet::topRearLeft,     "Ltr", "Top Rear L",      -135.0f,  45.0f, false },
-        { juce::AudioChannelSet::topRearRight,    "Rtr", "Top Rear R",       135.0f,  45.0f, false }
+        for (const auto& seed : speakerSeedTable)
+        {
+            if (seed.type == type)
+                return &seed;
+        }
+
+        return nullptr;
     };
 
-    SpeakerDefinitions defs{};
+    juce::StringArray usedIds;
 
-    for (size_t i = 0; i < defs.size(); ++i)
+    for (int channelIndex = 0; channelIndex < layout.size(); ++channelIndex)
     {
-        const auto& seed = seeds[i];
-        const auto unit = unitVectorFromAngles(seed.azimuth, seed.elevation);
-        const auto position = mapUnitToRoom(unit, defaultRoom, seed.isLfe);
+        const auto channelType = layout.getTypeOfChannel (channelIndex);
+        const auto* seed = findSeed (channelType);
+
+        float azimuth = seed != nullptr ? seed->azimuthDegrees : 0.0f;
+        float elevation = seed != nullptr ? seed->elevationDegrees : 0.0f;
+        const bool isLfe = seed != nullptr ? seed->isLfe : (channelType == juce::AudioChannelSet::LFE);
+
+        const auto unit = unitVectorFromAngles (azimuth, elevation);
+        const auto position = mapUnitToRoom (unit, defaultRoom, isLfe);
 
         auto aim = -position;
         const auto aimLength = aim.length();
+        if (aimLength > 1.0e-4f)
+            aim /= aimLength;
+        else
+            aim = { -1.0f, 0.0f, 0.0f };
 
-        if (aimLength > 1.0e-4f) aim /= aimLength;
-        else                     aim = { -1.0f, 0.0f, 0.0f };
+        juce::String id = seed != nullptr ? seed->id : juce::AudioChannelSet::getAbbreviatedChannelTypeName (channelType);
+        if (id.isEmpty())
+            id = juce::String (channelIndex + 1);
 
-        defs[i] = SpeakerDefinition
-        {
-            seed.id,
-            seed.name,
-            seed.azimuth,
-            seed.elevation,
+        if (usedIds.contains (id))
+            id += '_' + juce::String (channelIndex + 1);
+        usedIds.add (id);
+        juce::String displayName = seed != nullptr ? seed->displayName : juce::AudioChannelSet::getChannelTypeName (channelType);
+
+        defs.push_back ({
+            id,
+            displayName,
+            azimuth,
+            elevation,
             position.length(),
-            seed.isLfe,
+            isLfe,
             position,
             aim,
-            seed.type
-        };
+            channelType
+        });
     }
 
     return defs;
 }
 
+void AtmosVizAudioProcessor::rebuildSpeakerLayout()
+{
+    auto layout = getBusesLayout().getMainInputChannelSet();
+    auto defs = buildSpeakerDefinitions (layout);
+
+    if (defs.empty())
+        defs = buildSpeakerDefinitions (juce::AudioChannelSet::create7point1point4());
+
+    const juce::SpinLock::ScopedLockType lock (metricsLock);
+    speakerDefinitions = std::move (defs);
+    latestMetrics.assign (speakerDefinitions.size(), {});
+}
 int AtmosVizAudioProcessor::findDefinitionIndexForChannel(juce::AudioChannelSet::ChannelType type) const noexcept
 {
     for (size_t i = 0; i < speakerDefinitions.size(); ++i)

@@ -1,6 +1,6 @@
 # AtmosViz User Manual
 
-**Limitation:** AtmosViz currently supports only 7.1.4 channel layouts. Other bus configurations are not yet supported.
+**Limitation:** AtmosViz currently supports Dolby Atmos 7.1.2 / 7.1.4 / 7.1.6 channel layouts. Other bus configurations are not yet supported.
 
 ## 1. Installation
 **Windows (VST3 + Standalone)**

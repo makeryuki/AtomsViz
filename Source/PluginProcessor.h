@@ -1,12 +1,11 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include <array>
+#include <vector>
 
 class AtmosVizAudioProcessor : public juce::AudioProcessor
 {
 public:
-    static constexpr size_t kNumAtmosSpeakers = 12;
     static constexpr int fftOrder = 9;
     static constexpr int fftSize = 1 << fftOrder;
 
@@ -45,8 +44,8 @@ public:
         float earHeight;
     };
 
-    using SpeakerDefinitions = std::array<SpeakerDefinition, kNumAtmosSpeakers>;
-    using SpeakerMetricsArray = std::array<SpeakerMetrics, kNumAtmosSpeakers>;
+    using SpeakerDefinitions = std::vector<SpeakerDefinition>;
+    using SpeakerMetricsArray = std::vector<SpeakerMetrics>;
 
     AtmosVizAudioProcessor();
     ~AtmosVizAudioProcessor() override;
@@ -88,13 +87,14 @@ private:
     float computeRms(const float* data, int numSamples) const noexcept;
     float computePeak(const float* data, int numSamples) const noexcept;
     FrequencyBands analyseFrequencyContent(const float* data, int numSamples) noexcept;
-    static SpeakerDefinitions buildSpeakerDefinitions();
+    SpeakerDefinitions buildSpeakerDefinitions (const juce::AudioChannelSet& layout) const;
+    void rebuildSpeakerLayout();
     int findDefinitionIndexForChannel(juce::AudioChannelSet::ChannelType type) const noexcept;
 
-    static const SpeakerDefinitions speakerDefinitions;
     static const RoomDimensions defaultRoom;
 
-    SpeakerMetricsArray latestMetrics{};
+    SpeakerDefinitions speakerDefinitions;
+    SpeakerMetricsArray latestMetrics;
     mutable juce::SpinLock metricsLock;
 
     juce::HeapBlock<float> fftBuffer;

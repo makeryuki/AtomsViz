@@ -58,13 +58,7 @@ namespace
 SpeakerVisualizerComponent::SpeakerVisualizerComponent (AtmosVizAudioProcessor& p)
     : processor (p), roomDimensions (processor.getRoomDimensions())
 {
-    const auto& defs = processor.getSpeakerDefinitions();
-    speakers.reserve (defs.size());
-
-    for (const auto& def : defs)
-        speakers.push_back ({ def, {}, {}, {}, 0.0f });
-
-    updateHeatmapCache();
+    syncSpeakersWithDefinitions();
 
     const auto widthHalf  = roomDimensions.width * 0.5f;
     const auto depthHalf  = roomDimensions.depth * 0.5f;
@@ -111,11 +105,51 @@ void SpeakerVisualizerComponent::timerCallback()
 
 void SpeakerVisualizerComponent::refreshMetrics()
 {
-    AtmosVizAudioProcessor::SpeakerMetricsArray latest {};
+    syncSpeakersWithDefinitions();
+
+    AtmosVizAudioProcessor::SpeakerMetricsArray latest;
     processor.copyLatestMetrics (latest);
 
+    if (latest.size() < speakers.size())
+        latest.resize (speakers.size());
+
     for (size_t i = 0; i < speakers.size(); ++i)
-        speakers[i].metrics = latest[i];
+    {
+        if (i < latest.size())
+            speakers[i].metrics = latest[i];
+        else
+            speakers[i].metrics = {};
+    }
+}
+
+void SpeakerVisualizerComponent::syncSpeakersWithDefinitions()
+{
+    const auto& defs = processor.getSpeakerDefinitions();
+
+    bool needsRebuild = defs.size() != speakers.size();
+
+    if (!needsRebuild)
+    {
+        for (size_t i = 0; i < defs.size(); ++i)
+        {
+            if (speakers[i].definition.channelType != defs[i].channelType)
+            {
+                needsRebuild = true;
+                break;
+            }
+        }
+    }
+
+    if (!needsRebuild)
+        return;
+
+    speakers.clear();
+    speakers.reserve (defs.size());
+
+    for (const auto& def : defs)
+        speakers.push_back ({ def, {}, {}, {}, 0.0f });
+
+    updateHeatmapCache();
 }
 
 void SpeakerVisualizerComponent::updateProjectionScale()
