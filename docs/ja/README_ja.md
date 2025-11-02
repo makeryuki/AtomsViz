@@ -6,6 +6,12 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
 
 **制限事項:** AtmosViz は現在、JUCE 標準レイアウトのうちモノラル／ステレオから Dolby Atmos 9.1.6（Atmos / ITU 変種を含む）までをサポートしています。その他のバス構成には未対応です。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## ハイライト
 - **Inside / Outside 視点スイート**
   - それぞれの視点に対し 8 種類のカメラプリセット（Home / Front / Back / Left / Right / Top / User）を用意し、適切なヨー・ピッチ・距離を初期設定。
@@ -31,6 +37,12 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
   - 主なコントロールすべてを AudioProcessorValueTreeState パラメータ化し、DAW オートメーションとリコールに対応。
   - スタンドアロン実行ファイルもプラグインと同一 UI を備え、ホストを起動せずに動作確認が可能です。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## リポジトリ構成
 - Source/ - プラグイン本体およびエディタの実装。
 - JuceLibraryCode/ - JUCE により自動生成されたラッパコード。
@@ -45,9 +57,21 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
 - dist/AtmosViz_v0.6.0_macOS_CLAP.clap - macOS CLAP プラグインバンドル。
 - docs/ - 最新の設計資料およびユーザー／開発者ドキュメント（下記参照）。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## ビルド方法
 
-### Windows
+### ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
+## Windows
 1. **Visual Studio 2022**（Desktop development with C++ ワークロード）をインストール。
 2. JUCE 8.0.1 をインストールし、プロジェクト設定の JUCE パス（例: C:\\juce-8.0.1-windows\\JUCE）を確認。
 3. リポジトリルートで以下を実行します。
@@ -60,7 +84,13 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
 
 > **メモ:** JUCE の VST3 Manifest Helper は現在 MSB3073 を返しますが、プラグイン自体は正しく生成されます。マニフェストが不要であればポストビルド処理を無効化できます。
 
-### macOS
+### ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
+## macOS
 1. **Xcode 15**（および対応する Command Line Tools）をインストール。
 2. JUCE 8.0.1 と Projucer を導入し、AtmosViz.jucer のモジュール検索パスを実環境に合わせて更新。
 3. Xcode プロジェクトを再生成。
@@ -81,20 +111,44 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
    `
    完成したバンドルは uild-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap に配置されます。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## プラグインのインストール
 - **Windows (VST3):** Builds/VisualStudio2022/x64/Release/VST3/AtmosViz.vst3（または dist/AtmosViz_v0.6.0_Windows_VST3.zip 内のバンドル）を C:\Program Files\Common Files\VST3 へコピー。
 - **macOS (VST3):** Builds/MacOSX/build/Release/AtmosViz.vst3（または dist/AtmosViz_v0.6.0_macOS_VST3.zip）を /Library/Audio/Plug-Ins/VST3/ へコピー。
 - **macOS (AU):** Builds/MacOSX/build/Release/AtmosViz.component（または dist/AtmosViz_v0.6.0_macOS_AU.zip）を /Library/Audio/Plug-Ins/Components/ へコピー。
 - コピー後にホスト DAW でプラグインスキャンを再実行してください。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## スタンドアロンの実行
 - **Windows:** dist/AtmosViz_v0.6.0_Windows_Standalone.zip を展開し、AtmosViz.exe を起動。
 - **macOS:** dist/AtmosViz_v0.6.0_macOS_Standalone.zip を展開し、AtmosViz.app を /Applications へ移動またはそのまま起動。初回起動時に Gatekeeper の許可が必要な場合があります。
+
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
 
 ## CLAP プラグインのインストール
 - **Windows:** dist/AtmosViz_v0.6.0_Windows_CLAP.clap（または uild-clap の成果物）を C:/Program Files/Common Files/CLAP へ配置。
 - **macOS:** dist/AtmosViz_v0.6.0_macOS_CLAP.clap（または uild-clap-mac/AtmosViz_artefacts/Release/AtmosViz.clap）を /Library/Audio/Plug-Ins/CLAP/ へ配置。
 - カスタムフォルダを使用するホストでは適切なディレクトリへコピーし、プラグインスキャンを実行してください。
+
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
 
 ## ドキュメント
 - [ユーザーマニュアル](docs/user_manual.md)
@@ -110,12 +164,24 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
   - docs/release_checklist.md
 - 日本語版はそれぞれ _ja.md 付きファイルとして同ディレクトリに配置しています。
 
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## リリース手順
 1. Release ビルドスクリプト実行（前述参照）。
 2. 生成された VST3 バンドルを dist/AtmosViz_v<version>_Windows_VST3.zip として圧縮。
 3. コミットにタグを付与（git tag v<version>）し、git push && git push --tags。
 4. GitHub Release を作成し、docs/work_log.md のハイライトを掲載しながら成果物を添付。
 5. 公開前に少なくとも 1 つのホストでスモークテストを実施。
+
+## ビデオデモ
+
+[![機能デモ](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
 
 ## サポートと今後の課題
 - カメラ数式を変更した際は Inside プリセットを必ず再確認し、Outside が直交を維持していることを確認。
@@ -124,3 +190,4 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
 
 ---
 本ソフトウェアは Codex（GPT-5）とのペアプログラミングにより作成されています。
+
