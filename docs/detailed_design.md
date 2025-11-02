@@ -1,5 +1,7 @@
 # AtmosViz Detailed Design
 
+日本語版: [detailed_design_ja.md](ja/detailed_design_ja.md)
+
 ## UI Composition
 - **Header Strip**
   - `visualizationCombo`: selects Radiation Heatmap, Temporal Trails, Peak Hold, etc.
@@ -57,3 +59,5 @@ The editor creates `AudioProcessorValueTreeState::SliderAttachment` objects for 
 - VST3 manifest helper remains disabled; no moduleinfo metadata is packaged.
 - Heatmap calculation currently assumes Cartesian room layout; irregular rooms would need a new sampling grid.
 - No automated tests; manual regression required after camera/projection changes.
+
+

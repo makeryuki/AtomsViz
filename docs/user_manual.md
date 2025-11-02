@@ -1,5 +1,7 @@
 # AtmosViz User Manual
 
+日本語版: [user_manual_ja.md](ja/user_manual_ja.md)
+
 **Limitation:** AtmosViz currently supports JUCE standard layouts from mono/stereo up through Dolby Atmos 9.1.6 (Atmos/ITU variants). Other bus configurations are not yet supported.
 
 ## 1. Installation
@@ -82,6 +84,8 @@
 - Revisit Inside Top orientation (front wall alignment).
 - Automate visual regression via scripted camera sweeps.
 - Add optional 3D asset overlay for room treatment cues.
+
+
 
 
 

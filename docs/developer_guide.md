@@ -1,5 +1,7 @@
 # Developer Guide
 
+日本語版: [developer_guide_ja.md](ja/developer_guide_ja.md)
+
 ## Environment Setup
 1. Install Visual Studio 2022 (17.11+) with C++ Desktop workload (Windows).
 2. Install Xcode 15 (or newer) and the matching Command Line Tools if you are building on macOS.
@@ -85,3 +87,5 @@ See `docs/release_checklist.md` for the step-by-step routine. Key automation pie
 - Add unit tests for `computeInsideProjectionParameters`.
 - Integrate automated screenshot capture using JUCE's `Image` class for diffing.
 - Investigate manifest helper fix to remove post-build warnings.
+
+

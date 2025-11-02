@@ -1,5 +1,7 @@
 # Visualization Reference
 
+日本語版: [visualization_reference_ja.md](ja/visualization_reference_ja.md)
+
 ## View Modes
 | Mode | Description | Notes |
 |------|-------------|-------|
@@ -67,3 +69,5 @@
 3. Heatmap density label + slider + value label align right under the View Mode combo (<1 px jitter allowed).
 4. Colour Mix Pad button opens a floating call-out; closing the pad restores keyboard focus to the main editor.
 5. Visualization Gain slider reacts to preset changes and Draw Scale mode without clipping range.
+
+

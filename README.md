@@ -1,5 +1,7 @@
 # AtmosViz
 
+Japanese version: [README_ja.md](README_ja.md)
+
 AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. It renders speaker activity and heatmap energy distributions in both interior and exterior perspectives, exposing fine-grained UI controls for engineers who need to monitor immersive mixes.
 
 **Limitation:** AtmosViz currently supports JUCE standard layouts from mono/stereo up through Dolby Atmos 9.1.6 (Atmos/ITU variants). Other bus configurations are not yet supported.
@@ -120,6 +122,8 @@ For release packaging or regression planning, consult `docs/developer_guide.md` 
 
 ---
 This software is being developed via pair programming with Codex (GPT-5).
+
+
 
 
 

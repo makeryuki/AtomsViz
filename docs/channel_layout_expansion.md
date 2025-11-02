@@ -1,5 +1,7 @@
 # Channel Layout Expansion Plan
 
+日本語版: [channel_layout_expansion_ja.md](ja/channel_layout_expansion_ja.md)
+
 ## Background
 - Current builds only supported Dolby Atmos 7.1.4 (12 channels).
 - JUCE's `AudioChannelSet` exposes additional immersive layouts (7.1.2, 7.1.6, 5.1.x, 9.1.x, etc.) that production users rely on.
@@ -26,3 +28,5 @@
 ## Progress (2025-10-29)
 - Completed Phase 1 (dynamic containers) and added automatic detection for JUCE layouts from mono/stereo to Dolby Atmos 9.1.6 (Atmos/ITU variants).
 - Next steps: support discrete/custom layouts and visual tuning for additional wides/height variants.
+
+

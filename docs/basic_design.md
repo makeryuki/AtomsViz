@@ -1,5 +1,7 @@
 # AtmosViz Basic Design
 
+日本語版: [basic_design_ja.md](ja/basic_design_ja.md)
+
 ## Purpose
 AtmosViz visualises Dolby Atmos speaker layouts for immersive mix monitoring. The tool focuses on presenting spatial energy in two perspectives:
 - **Outside view** – orthographic projection outside the room for engineering checks.
@@ -53,3 +55,5 @@ Audio Input → AtmosVizAudioProcessor (metrics & bands) → SpeakerVisualizerCo
 - Manual verification using the standalone executable.
 - Host smoke tests in a VST3-compatible DAW for automation, parameter recall, and re-scan behaviour.
 - Visual regression checklists stored in `docs/work_log.md` for future automation.
+
+

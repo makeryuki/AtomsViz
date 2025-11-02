@@ -1,5 +1,7 @@
 # Release Checklist
 
+日本語版: [release_checklist_ja.md](ja/release_checklist_ja.md)
+
 ## Preparation
 - [ ] Ensure `master` is up to date and all tests/manual checks have passed.
 - [ ] Update `docs/work_log.md` with release summary.
@@ -60,3 +62,5 @@
 - [ ] Open new issue(s) for outstanding TODO items.
 - [ ] Archive fresh screenshots under `1/<yyyyMMdd>/` if visuals changed.
 - [ ] Notify internal channels (`#atmosviz-dev`) with download link.
+
+

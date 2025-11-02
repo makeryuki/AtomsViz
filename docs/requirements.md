@@ -1,5 +1,7 @@
 # AtmosViz Requirements (2025-10-19)
 
+日本語版: [requirements_ja.md](ja/requirements_ja.md)
+
 ## Functional Requirements
 | ID | Description | Status |
 |----|-------------|--------|
@@ -31,3 +33,5 @@
 - Adjust Inside Top orientation so the front wall maps to the bottom of the viewport.
 - Consider adding automated visual regression (camera sweeps) to replace manual screenshot comparison.
 - Decide whether to keep manifest generation disabled or migrate to native x64 helper.
+
+
