@@ -53,8 +53,6 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
 
 ## ビルド方法
 
-### ビデオデモ
-
 
 
 ## Windows
@@ -69,8 +67,6 @@ AtmosViz は、JUCE をベースにした Dolby Atmos 可視化プラグイン�
    - スタンドアロン実行ファイル: Builds/VisualStudio2022/x64/Release/Standalone Plugin/AtmosViz.exe
 
 > **メモ:** JUCE の VST3 Manifest Helper は現在 MSB3073 を返しますが、プラグイン自体は正しく生成されます。マニフェストが不要であればポストビルド処理を無効化できます。
-
-### ビデオデモ
 
 
 
