@@ -6,6 +6,12 @@ AtmosViz is a JUCE-based Dolby Atmos visualisation plug-in and standalone tool. 
 
 **Limitation:** AtmosViz currently supports JUCE standard layouts from mono/stereo up through Dolby Atmos 9.1.6 (Atmos/ITU variants). Other bus configurations are not yet supported.
 
+## Video Demos
+
+[![Feature Demo](https://img.youtube.com/vi/ScN5kZFw42c/hqdefault.jpg)](https://youtu.be/ScN5kZFw42c)
+
+[![AtmosViz Demo: From a 7.1.2-Channel Bed to Rendered Dolby Atmos Channels](https://img.youtube.com/vi/sDN6ZurD0Lc/hqdefault.jpg)](https://youtu.be/sDN6ZurD0Lc)
+
 ## Highlights
 - **Inside / Outside perspective suite**
   - Eight camera presets per perspective (Home, Front, Back, Left, Right, Top, User) with sensible defaults for yaw, pitch, and distance.
